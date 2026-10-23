@@ -10,6 +10,13 @@
 
 ![demo](docs/demo.svg)
 
+仓库两半：
+
+| 半边 | 位置 | 是什么 |
+|---|---|---|
+| 插件 | 仓库根目录 | 输入框分段条 + 宿主桥 + `clarify_tier` 工具 |
+| 技能 | [`skill/clarify-needs`](skill/clarify-needs) | 拿到档位之后怎么问：复述 / 确认点 / 设计树 / 共识摘要 |
+
 ## 它解决什么
 
 模型接任务时的"问多深"通常靠临场判断：琐事被追问三轮，重活却只确认一句。
@@ -58,6 +65,20 @@ pwsh -File install-profile.ps1 -DshHome "C:\Users\<you>\.dsh"
 - 模型可见通道：工具 `clarify_tier`（读当前值；不写）
 
 三条纪律：**fail-open**（注册失败只是控件不出现）、**不碰官方 DOM**、**不注入会话消息**。
+
+## 技能 clarify-needs
+
+`skill/clarify-needs/` 是一个 DSH 常驻技能：拿到档位后按对应流程执行——静默不介入、方向只对一句、
+约束复述 + 2 确认点、落地复述 + 3 确认点 + 回滚、拷问走设计树直到没有默认假设。
+
+装法（复制或 junction 到技能目录）：
+
+```powershell
+# junction：改仓库里的文件立即生效
+cmd /c mklink /J "%USERPROFILE%\.dsh\skills\clarify-needs" "%CD%\skill\clarify-needs"
+```
+
+技能与插件可各自独立使用：只装技能、靠用户口头说「用 max」也能用；只装插件、模型读到档位但没有技能时也能按档位自行收放。
 
 ## 已知边界
 

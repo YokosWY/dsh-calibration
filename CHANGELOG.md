@@ -1,5 +1,11 @@
 # 变更记录
 
+## 0.2.0 — 2026-10-23
+- **迁入技能 `clarify-needs`**（原在 token-governance 仓库，v0.11.1 起迁出）：仓库现在是「插件 + 技能」两半
+  - 技能路径 `skill/clarify-needs/`，装法见 README（复制或 junction 到技能目录）
+  - 五档命名统一为：静默 / 方向 / 约束 / 落地 / 拷问
+- README 增加两半说明与技能安装段
+
 ## 0.1.3 — 2026-10-23
 - 移除界面截图 `docs/preview.png`（改由 `docs/demo.svg` 演示）；README 同步去掉该图
 
