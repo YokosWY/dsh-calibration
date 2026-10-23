@@ -14,6 +14,7 @@ const CODE = readFileSync(join(here, "..", "lib", "client.js"), "utf8");
 function boot(remote = { mode: "think", level: "high" }) {
   const registerCalls = [];
   const posts = [];
+  const listeners = [];
   const store = new Map();
   const React = {
     createElement: (type, props, ...children) => ({
@@ -22,15 +23,15 @@ function boot(remote = { mode: "think", level: "high" }) {
       children: children.flat ? children.flat() : children,
     }),
     useState: (init) => [init, () => {}],
+    // 不立刻执行 cleanup：否则 focus 监听刚挂上就被拆掉，测不到
     useEffect: (fn) => {
-      const cleanup = fn();
-      if (typeof cleanup === "function") cleanup();
+      fn();
     },
   };
   const sandbox = {
     window: {
       __ModuleLoader__: { load: (cfg) => { sandbox.__loaded = cfg; } },
-      addEventListener: () => {},
+      addEventListener: (type) => { listeners.push(type); },
       removeEventListener: () => {},
     },
     document: {
@@ -75,6 +76,7 @@ function boot(remote = { mode: "think", level: "high" }) {
     posts,
     registerCalls,
     loadedId: sandbox.__loaded.id,
+    listeners,
     render: () => registerCalls[0].comp().type(),
   };
 }
@@ -110,6 +112,12 @@ test("循环模式：标签换成循环档，循环格亮起", () => {
   assert.deepEqual(labels, ["轻量", "交付", "极限"]);
   assert.equal(tree.children[4].props["data-on"], "1");
   assert.equal(tree.children[4].props["data-mode-toggle"], "loop");
+});
+
+test("挂载时注册 focus 刷新（双窗对齐）", () => {
+  const env = boot();
+  env.render(); // effect 在组件首次渲染时才跑
+  assert.ok(env.listeners.includes("focus"));
 });
 
 test("点档位只提交 level，点循环只提交 mode", () => {

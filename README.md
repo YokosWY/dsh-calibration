@@ -80,10 +80,10 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 ## 测试
 
 ```bash
-npm test     # node --test，23 项，约 4 秒
+npm test     # node --test，26 项，约 4 秒
 ```
 
-覆盖：状态默认值、模式/档位合并写、非法值 400、两种老 schema 迁移 + `.bak`、坏 JSON 与未知 schema 不覆写、字段坏只保留能认的一半、两个工具投影、跨站 Origin 403（读/写/预检/null/子域伪装）、本机 Origin 回显 204、`text/plain` 415、写盘失败 500、四格结构、两套标签、循环格亮起、只提交变化维度、`/state` 文案优先、兜底文案与宿主表逐字一致、琥珀样式与隔离线。
+覆盖：状态默认值、模式/档位合并写、非法值 400、标量与坏 JSON 400、两种老 schema 迁移 + `.bak`、坏 JSON 与未知 schema 不覆写（含「未来 schema 带 tier/forge」也不降级）、字段坏只保留能认的一半、两个工具投影、跨站 Origin 403（读/写/预检/null/子域伪装）、本机 Origin 回显 204、`text/plain` 415、写盘失败 500、四格结构、两套标签、循环格亮起、只提交变化维度、focus 重新对齐、`/state` 文案优先、兜底文案与宿主表逐字一致、琥珀样式与隔离线。
 
 ## 配套技能
 

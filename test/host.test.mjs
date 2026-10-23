@@ -120,6 +120,27 @@ test("未知 schema（6）：只读兜底，不降级覆写", async () => {
   assert.equal(readFileSync(statePath, "utf8"), future);
 });
 
+test("未知 schema 即使带 tier/forge 也不许降级覆盖", async () => {
+  const future = JSON.stringify({ schema: 6, forge: "max" });
+  writeFileSync(statePath, future, "utf8");
+  const s = await (await get()).json();
+  assert.equal(s.source, "unsupported");
+  assert.equal(readFileSync(statePath, "utf8"), future);
+});
+
+test("标量 body 返回 400，宿主不崩", async () => {
+  for (const raw of ["5", "null", '"loop"', "[1,2]"]) {
+    const res = await fetch(BASE, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: raw,
+    });
+    assert.equal(res.status, 400, `body=${raw} 应被拒绝`);
+  }
+  const s = await (await get()).json();
+  assert.ok(["think", "loop"].includes(s.mode), "宿主应仍可服务");
+});
+
 test("schema 5 但字段坏：保留能认的一半，不回写", async () => {
   const mixed = JSON.stringify({ schema: 5, mode: "loop", level: "bogus" });
   writeFileSync(statePath, mixed, "utf8");

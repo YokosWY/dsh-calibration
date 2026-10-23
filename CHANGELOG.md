@@ -1,5 +1,11 @@
 # 变更记录
 
+## 0.5.4 — 2026-10-23
+- **堵住降级覆盖**：迁移判定加 schema 门槛——只有「没有 schema」或 `schema < 5` 的老文件才迁移；`{schema:6, forge:"max"}` 这种未来版本带旧字段的文件不再被降级写成 `schema:5`
+- **修一处自引入回归**：POST body 是 `null` / 数字 / 字符串 / 数组时，`"mode" in patch` 抛 TypeError 会打断连接；现在先判对象，标量与坏 JSON 一律 400
+- **测试 23 → 26**：未来 schema 带 tier/forge 不降级、标量 body 四种形态 400 且宿主仍可服务、focus 刷新注册（此前 effect cleanup 把监听拆了，测不到）
+- 文档同步测试数量与覆盖范围
+
 ## 0.5.3 — 2026-10-23
 - **读不再毁数据**：坏 JSON、未知 schema（`schema:6`）、字段坏文件一律只读兜底（`corrupt` / `unsupported` / `sanitized`），不再一次 GET 就把用户设置冲成默认；迁移前写 `.bak`，落盘改临时文件 + `rename`
 - **写失败不谎报**：磁盘不可写时 POST 返 500（`write failed`），此前返回 200 但没写进去
