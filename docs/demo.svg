@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="96" viewBox="0 0 480 96" role="img" aria-label="需求锚定档位分段条演示">
+  <title>dsh-clarify-tier 演示</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d1d20"/>
+      <stop offset="1" stop-color="#17171a"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="480" height="96" rx="16" fill="url(#bg)"/>
+  <text x="24" y="28" fill="#8b8b93" font-family="ui-sans-serif, system-ui, 'Segoe UI', sans-serif" font-size="11">需求锚定档位 · 点击切换</text>
+
+  <!-- 轨道 -->
+  <rect x="24" y="42" width="360" height="34" rx="17" fill="#242428" stroke="#3a3a40"/>
+
+  <!-- 选中高亮（5 个，循环点亮） -->
+  <g>
+    <rect x="28" y="46" width="64" height="26" rx="13" fill="#7c6cf0">
+      <animate attributeName="opacity" values="1;1;0;0;0;0;0;0;0;0;1" keyTimes="0;0.1;0.2;0.3;0.4;0.5;0.6;0.7;0.8;0.9;1" calcMode="discrete" dur="6s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="96" y="46" width="64" height="26" rx="13" fill="#7c6cf0">
+      <animate attributeName="opacity" values="0;0;1;1;0;0;0;0;0;0;0" keyTimes="0;0.1;0.2;0.3;0.4;0.5;0.6;0.7;0.8;0.9;1" calcMode="discrete" dur="6s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="164" y="46" width="64" height="26" rx="13" fill="#7c6cf0">
+      <animate attributeName="opacity" values="0;0;0;0;1;1;0;0;0;0;0" keyTimes="0;0.1;0.2;0.3;0.4;0.5;0.6;0.7;0.8;0.9;1" calcMode="discrete" dur="6s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="232" y="46" width="64" height="26" rx="13" fill="#7c6cf0">
+      <animate attributeName="opacity" values="0;0;0;0;0;0;1;1;0;0;0" keyTimes="0;0.1;0.2;0.3;0.4;0.5;0.6;0.7;0.8;0.9;1" calcMode="discrete" dur="6s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="300" y="46" width="64" height="26" rx="13" fill="#7c6cf0">
+      <animate attributeName="opacity" values="0;0;0;0;0;0;0;0;1;1;0" keyTimes="0;0.1;0.2;0.3;0.4;0.5;0.6;0.7;0.8;0.9;1" calcMode="discrete" dur="6s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+
+  <!-- 文案 -->
+  <g fill="#e7e5ff" font-family="ui-sans-serif, system-ui, 'Segoe UI', sans-serif" font-size="12" text-anchor="middle">
+    <text x="60" y="64">off</text>
+    <text x="128" y="64">low</text>
+    <text x="196" y="64">high</text>
+    <text x="264" y="64">max</text>
+    <text x="332" y="64">ultra</text>
+  </g>
+
+  <text x="398" y="64" fill="#9a9aa3" font-family="ui-sans-serif, system-ui, 'Segoe UI', sans-serif" font-size="11">模型选择 →</text>
+</svg>

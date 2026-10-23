@@ -1,7 +1,14 @@
 # dsh-clarify-tier
 
+[![release](https://img.shields.io/github/v/release/YokosWY/dsh-clarify-tier?color=7c6cf0)](https://github.com/YokosWY/dsh-clarify-tier/releases)
+[![license](https://img.shields.io/github/license/YokosWY/dsh-clarify-tier?color=7c6cf0)](LICENSE)
+[![platform](https://img.shields.io/badge/DSH-web%20client-7c6cf0)](#安装)
+[![node](https://img.shields.io/badge/node-%E2%89%A522-7c6cf0)](package.json)
+
 > 给 DeepSeek Harness 的输入框加一条 **需求锚定档位** 分段条：`off / low / high / max / ultra`。
 > 用户选档，模型通过 `clarify_tier` 工具读到，据此决定"开工前问多深"。
+
+![demo](docs/demo.svg)
 
 ![preview](docs/preview.png)
 
