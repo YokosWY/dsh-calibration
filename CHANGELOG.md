@@ -1,5 +1,11 @@
 # 变更记录
 
+## 0.9.1 — 2026-10-24（诊断版）
+- 插槽候选回退：`conversation.input.right` → `.dock` → `.left`，谁存在用谁（NEXT 实际没有 right 的渲染点）
+- 客户端诊断上报：apply / inject-call / registered / register-error 经 `POST /debug` 落到 `storages/clarify-tier-debug.jsonl`
+- 新增临时工具 `debug_probe`：回传工具执行上下文（exec/agent/session/turn）字段名，用于定位 turn id
+- 结论目标：确认插槽注册是否发生 + 拿到真正的轮 id 字段
+
 ## 0.9.0 — 2026-10-24
 - **改成每轮快照**（替掉 0.8 的「整对话锁死」）：一条用户消息 = 一轮；开工第一次调工具时把当时档位记进 `turn{id,mode,level}`，本轮内不再变
 - 轮内点档位条：正常写盘（不 409、不置灰），只影响下一轮；`/state` 与 SSE 返回 `pending`，条尾显示琥珀小点提示「下轮生效」
