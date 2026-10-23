@@ -1,5 +1,12 @@
 # 变更记录
 
+## 1.4.1 — 2026-10-24
+- **档位标准收敛到三档**（关闭 / 严格 / 极致，默认严格）：`clarify-needs` 的 `README.md` 与 `docs/design.md` 还停在四档（含 `low 常规`），而档位条只有 `off/high/max` 三格——技能本体 `SKILL.md` 早就是三档，这两个文件落后一版
+- 原「常规」的三样（复述 / 2 确认点 / 假设清单≤3）并入严格档；定档评分改 `0=off / 1–2=high / ≥3=max`；地板改「会改文件/配置/系统的任务最低 high」；`clarify-needs` 版本记 v5.0
+- 两份 `AGENTS.md`（官方 DSH 与 NEXT）§0 同步成三档、最高档统一叫「极致」、取不到档位按 `high`（md5 保持一致）
+- **新增守则**：`skill/clarify-needs/` 里的档位表必须与宿主 `LEVELS` 完全一致（多写一档就会红）——这次漂移就是它该拦住的
+- 测试 46 → 47；版本 1.4.1（`files` 含 skill，所以技能文档改动也算发布内容）
+
 ## 1.4.0 — 2026-10-24
 - **宿主拆模块**：`lib/index.js` 693 行 → 装配层 ~80 行，逻辑分到 `core.js`（常量/文案/会话键/广播总线）、`state.js`（读写与迁移）、`bridge.js`（HTTP + SSE + 端口退让）、`tools.js`（两个工具 + 轮内快照）。**对外导出不变**：`apply` / `inject` / `TIER_LABELS` / `TIER_TITLES` / `publicState` / `turnIdFromExec` 等照旧从 `lib/index.js` 拿
 - **客户端保持单文件**：模块加载器只吃一个 factory，拆 import 会直接起不来；去重靠内部 `applyState()`，不靠拆文件

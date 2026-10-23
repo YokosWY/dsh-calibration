@@ -6,6 +6,7 @@ import assert from "node:assert";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { LEVELS } from "../lib/core.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -56,6 +57,15 @@ test("skill 的当前状态表用「极致」", () => {
   const row = rows.find((l) => l.startsWith("| **max**"));
   assert.ok(row, "skill README 里找不到 max 档那一行");
   assert.ok(row.includes("极致"), `max 档那一行还是旧名：${row}`);
+});
+
+test("技能里的档位表与宿主 LEVELS 是同一套", () => {
+  // 档位条只有 off/high/max 三格；技能文档里多写一档，模型就会去读一个拨不到的档
+  const levelsIn = (file) =>
+    [...read(file).matchAll(/^\|\s*\*\*(off|low|high|max)\*\*\s*\|/gm)].map((m) => m[1]);
+  for (const file of ["skill/clarify-needs/SKILL.md", "skill/clarify-needs/README.md"]) {
+    assert.deepEqual(levelsIn(file), LEVELS, `${file} 的档位表与宿主 LEVELS 不一致`);
+  }
 });
 
 test("README 已知边界不再回头说全局与写死端口", () => {
