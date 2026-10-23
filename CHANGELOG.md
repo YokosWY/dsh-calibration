@@ -1,5 +1,10 @@
 # 变更记录
 
+## 1.0.1 — 2026-10-24
+- `readPhaseTurn`：兼容 `agent.phase` 是 getter / 函数 / 对象三种形状
+- 加 `clarify-tier-turn.jsonl` 诊断：记录 phase 的类型/键/`turn` 值，定位“探针能看到、运行时取不到”的差异
+- 其余不变
+
 ## 1.0.0 — 2026-10-24
 - **轮 id 实测定案**：`agent.phase.turn`（探针实测 `{kind:"running", turn:15, step:1}`），轮内快照终于能落地
 - 轮语义：同一 `phase.turn` 内只用开工时那份；`phase.turn` 变化即新一轮，自动换用当前值
