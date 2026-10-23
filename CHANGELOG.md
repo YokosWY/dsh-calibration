@@ -1,5 +1,11 @@
 # 变更记录
 
+## 0.9.2 — 2026-10-24
+- **根因找到**：Web 客户端 Origin 是 `dsh-app://app`，被 Origin 白名单拒掉 → 所有 `/state`、`/events` 请求 CORS 失败，控件读到空数据
+- Origin 白名单放行 `dsh-app:` 协议；其余规则不变（http/https 仍限本机）
+- 诊断加码：上报 `ctx.slots` 的键、每个候选槽的 inject 是否真正触发
+- `debug_probe` 加深：session.id / agent.id / phase / loopCtx / runtimeContext 的标量字段
+
 ## 0.9.1 — 2026-10-24（诊断版）
 - 插槽候选回退：`conversation.input.right` → `.dock` → `.left`，谁存在用谁（NEXT 实际没有 right 的渲染点）
 - 客户端诊断上报：apply / inject-call / registered / register-error 经 `POST /debug` 落到 `storages/clarify-tier-debug.jsonl`
