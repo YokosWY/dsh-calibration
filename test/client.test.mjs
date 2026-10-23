@@ -15,7 +15,20 @@ function boot(remote = { mode: "think", level: "high" }) {
   const registerCalls = [];
   const posts = [];
   const listeners = [];
+  const streams = [];
   const store = new Map();
+  class FakeEventSource {
+    constructor(url) {
+      this.url = url;
+      this.readyState = 1;
+      this.onmessage = null;
+      this.onerror = null;
+      streams.push(this);
+    }
+    close() {
+      this.readyState = 2;
+    }
+  }
   const React = {
     createElement: (type, props, ...children) => ({
       type,
@@ -54,6 +67,7 @@ function boot(remote = { mode: "think", level: "high" }) {
     console,
     Promise,
     setTimeout,
+    EventSource: FakeEventSource,
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
@@ -77,6 +91,7 @@ function boot(remote = { mode: "think", level: "high" }) {
     registerCalls,
     loadedId: sandbox.__loaded.id,
     listeners,
+    streams,
     render: () => registerCalls[0].comp().type(),
   };
 }
@@ -118,6 +133,16 @@ test("挂载时注册 focus 刷新（双窗对齐）", () => {
   const env = boot();
   env.render(); // effect 在组件首次渲染时才跑
   assert.ok(env.listeners.includes("focus"));
+});
+
+test("用 SSE 接收其他窗口的改动并落本地", () => {
+  const env = boot();
+  env.render();
+  assert.equal(env.streams.length, 1, "应建立一条 SSE 连接");
+  assert.match(env.streams[0].url, /\/events$/);
+  env.streams[0].onmessage({ data: JSON.stringify({ mode: "loop", level: "max" }) });
+  assert.deepEqual(JSON.parse(env.store.get("dsh-tier-mode")), { mode: "loop", level: "max" });
+  env.streams[0].onmessage({ data: "{bad" }); // 坏帧不许抛
 });
 
 test("点档位只提交 level，点循环只提交 mode", () => {

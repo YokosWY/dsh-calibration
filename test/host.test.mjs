@@ -5,6 +5,7 @@ import assert from "node:assert";
 import { mkdtempSync, writeFileSync, readFileSync, mkdirSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
+import http from "node:http";
 
 const home = mkdtempSync(join(tmpdir(), "dsh-tier-test-"));
 process.env.DSH_HOME = home;
@@ -223,4 +224,66 @@ test("写盘失败返回 500，不谎报成功", async () => {
     rmSync(storages, { force: true });
     mkdirSync(storages, { recursive: true });
   }
+});
+
+const NL = String.fromCharCode(10);
+
+async function waitFor(fn, timeout = 4000) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    if (fn()) return;
+    await new Promise((r) => setTimeout(r, 25));
+  }
+  throw new Error("timeout waiting for condition");
+}
+
+function openStream(headers = {}) {
+  return new Promise((resolve, reject) => {
+    const req = http.get({ host: "127.0.0.1", port: 43991, path: "/events", headers }, (res) => {
+      const frames = [];
+      let buf = "";
+      res.setEncoding("utf8");
+      res.on("data", (chunk) => {
+        buf += chunk;
+        let idx;
+        while ((idx = buf.indexOf(NL + NL)) >= 0) {
+          const frame = buf.slice(0, idx);
+          buf = buf.slice(idx + 2);
+          const line = frame.split(NL).find((l) => l.startsWith("data: "));
+          if (line) {
+            try {
+              frames.push(JSON.parse(line.slice(6)));
+            } catch {
+              /* 忽略坏帧 */
+            }
+          }
+        }
+      });
+      resolve({ req, res, frames });
+    });
+    req.on("error", reject);
+  });
+}
+
+test("SSE：连上先推当前状态，写入后广播给所有订阅者", async () => {
+  await setState("think", "high");
+  const a = await openStream({ Origin: "http://127.0.0.1:60465" });
+  const b = await openStream();
+  try {
+    await waitFor(() => a.frames.length >= 1 && b.frames.length >= 1);
+    assert.equal(a.frames.at(-1).mode, "think", "首帧应是当前状态");
+    await post({ mode: "loop", level: "max" });
+    await waitFor(() => a.frames.length >= 2 && b.frames.length >= 2);
+    assert.equal(a.frames.at(-1).mode, "loop");
+    assert.equal(a.frames.at(-1).level, "max");
+    assert.deepEqual(b.frames.at(-1), a.frames.at(-1), "两个订阅者收到同一帧");
+  } finally {
+    a.req.destroy();
+    b.req.destroy();
+  }
+});
+
+test("SSE：跨站 Origin 被拒", async () => {
+  const res = await fetch("http://127.0.0.1:43991/events", { headers: { Origin: "https://evil.example" } });
+  assert.equal(res.status, 403);
 });
