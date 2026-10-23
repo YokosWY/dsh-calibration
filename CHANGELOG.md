@@ -1,5 +1,8 @@
 # 变更记录
 
+## 1.0.2 — 2026-10-24
+- `turnIdFromExec` 逐候选追踪（写入 `clarify-tier-turn.jsonl`），定位“phaseTurn=17 但 turnId=null”
+
 ## 1.0.1 — 2026-10-24
 - `readPhaseTurn`：兼容 `agent.phase` 是 getter / 函数 / 对象三种形状
 - 加 `clarify-tier-turn.jsonl` 诊断：记录 phase 的类型/键/`turn` 值，定位“探针能看到、运行时取不到”的差异
