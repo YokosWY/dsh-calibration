@@ -64,8 +64,26 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 | 宿主 | `lib/index.js` | 合并式落盘、回环桥、`clarify_tier` 与 `forge_level` 两个只读工具 |
 | 形态 | `cordis.patch.yml` + `package.json` 的 `dsh.client` | 进 cordis 树，客户端产物编进启动包 |
 
-- 桥：`http://127.0.0.1:43871/state`（GET/POST，只绑回环，CORS `*`，端口可用 `DSH_CLARIFY_TIER_PORT` 改）
+- 桥：`http://127.0.0.1:43871/state`（GET/POST，只绑回环，端口可用 `DSH_CLARIFY_TIER_PORT` 改）
+- 档名 / 悬停 / 轮次表只在宿主定义一次，客户端从 `/state` 的 `labels`、`titles` 读；离线兜底文案由测试锁死与宿主一致
 - 三条纪律：**fail-open**（注册失败只是控件不出现）、**不碰官方 DOM**、**不注入会话消息**
+
+## 安全边界
+
+桥只绑 `127.0.0.1`，并且：
+
+- **带 Origin 的请求只放行本机页面**（`127.0.0.1` / `localhost` / `::1`），其余返回 403，且不回显 `Access-Control-Allow-Origin`
+- 无 Origin 的请求（curl、测试、本地脚本）照常放行
+- **POST 必须是 `application/json`**，挡掉 `text/plain` 这类绕过预检的简单请求
+- 没有 token 鉴权：**同机其它进程仍可写**。这台机器上的信任边界就是本机，够用但不防本机恶意程序
+
+## 测试
+
+```bash
+npm test     # node --test，23 项，约 4 秒
+```
+
+覆盖：状态默认值、模式/档位合并写、非法值 400、两种老 schema 迁移 + `.bak`、坏 JSON 与未知 schema 不覆写、字段坏只保留能认的一半、两个工具投影、跨站 Origin 403（读/写/预检/null/子域伪装）、本机 Origin 回显 204、`text/plain` 415、写盘失败 500、四格结构、两套标签、循环格亮起、只提交变化维度、`/state` 文案优先、兜底文案与宿主表逐字一致、琥珀样式与隔离线。
 
 ## 配套技能
 
@@ -79,12 +97,21 @@ cmd /c mklink /J "D:\AI\DSH-NEXT\skills\loop-forge" "D:\AI\Skills\mine\loop-forg
 cmd /c mklink /J "D:\AI\DSH-NEXT\skills\clarify-needs" "%CD%\skill\clarify-needs"
 ```
 
+## 数据安全
+
+- **读不出来不覆写**：坏 JSON / 未知 schema（如未来的 `schema:6`）只返回默认值并标 `corrupt` / `unsupported`，原文件原样保留
+- **迁移前留备份**：旧的 `{tier, forge}` 迁移时先写 `clarify-tier.json.bak`
+- **原子写**：临时文件 + `rename`，避免写到一半断电留下半截 JSON
+- **写失败不谎报**：磁盘不可写时 POST 返回 500（`error: write failed`），不返回 200
+
 ## 已知边界
 
 - 档位是**全局**的，不是每会话一份
-- 桥接端口被占时，控件退化为只读（虚线边框 + `!`）
+- 桥接端口被占时，控件退化为只读（虚线边框 + `!`）：本地点击仍然换档，但**不会同步到宿主**，重启后按宿主里的值走
+- `DSH_CLARIFY_TIER_PORT` 只改宿主端口；客户端 `BRIDGE` 写死 `43871`，改端口要两边一起改
 - 工具返回的是调用时刻的值；中途改档要再调一次
 - 循环模式不叠加思考档：需要强提问就先退回思考模式
+- 多窗口下切回窗口时会重新对齐一次；两次点击之间仍可能互相覆盖（没有服务端推送）
 
 ## 踩过的坑（别重犯）
 
@@ -93,6 +120,7 @@ cmd /c mklink /J "D:\AI\DSH-NEXT\skills\clarify-needs" "%CD%\skill\clarify-needs
 | 客户端 bundle 的 `id` 写成短名 | `duplicate factory registration` → `web boot: 1 entry did not activate` → GUI 起不来 | `id` 必须等于包名（含 `@scope`） |
 | 宿主没声明 `inject` | `cannot get property "tools" without inject`，工具静默消失 | `export const inject = ["tools"]` |
 | 两个开关写同一文件不做合并 | 切档把另一轴冲掉 | `writeState` 读旧值再合并 |
+| 把「读不到」当成「要重置」 | 一次 GET 就把用户设置冲成默认 | 坏文件/未知 schema 只读兜底，迁移才写盘 |
 
 ## 卸载
 
