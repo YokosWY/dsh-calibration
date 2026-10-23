@@ -74,7 +74,7 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 | 宿主 | `lib/index.js` | 合并式落盘、回环桥、`clarify_tier` 与 `forge_level` 两个只读工具 |
 | 形态 | `cordis.patch.yml` + `package.json` 的 `dsh.client` | 进 cordis 树，客户端产物编进启动包 |
 
-- 桥：`http://127.0.0.1:43871/state`（GET/POST）与 `/events`（SSE）；只绑回环，端口可用 `DSH_CLARIFY_TIER_PORT` 改
+- 桥：`http://127.0.0.1:43871/state`（GET/POST）与 `/events`（SSE）；只绑回环，宿主在 `43871–43880` 里取第一个能绑的端口，客户端按同区间探测 `/state` 的 `plugin` 标记自动对齐，两套 DSH 同时开着也不打架
 - 档名 / 悬停 / 轮次表只在宿主定义一次，客户端从 `/state` 的 `labels`、`titles` 读；离线兜底文案由测试锁死与宿主一致
 - 三条纪律：**fail-open**（注册失败只是控件不出现）、**不碰官方 DOM**、**不注入会话消息**
 
@@ -90,10 +90,10 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 ## 测试
 
 ```bash
-npm test     # node --test，29 项，约 4 秒
+npm test     # node --test，31 项，约 3.4 秒
 ```
 
-覆盖：状态默认值、模式/档位合并写、非法值 400、标量与坏 JSON 400、两种老 schema 迁移 + `.bak`、坏 JSON 与未知 schema 不覆写（含「未来 schema 带 tier/forge」也不降级）、字段坏只保留能认的一半、两个工具投影、跨站 Origin 403（读/写/预检/null/子域伪装）、本机 Origin 回显 204、`text/plain` 415、写盘失败 500、SSE 首帧与写入广播（两个订阅者收同一帧）、跨站 SSE 403、四格结构、两套标签、循环格亮起、只提交变化维度、focus 重新对齐、SSE 推送落本地与坏帧容错、`/state` 文案优先、兜底文案与宿主表逐字一致、琥珀样式与隔离线。
+覆盖：状态默认值、模式/档位合并写、非法值 400、标量与坏 JSON 400、两种老 schema 迁移 + `.bak`、坏 JSON 与未知 schema 不覆写（含「未来 schema 带 tier/forge」也不降级）、字段坏只保留能认的一半、两个工具投影、跨站 Origin 403（读/写/预检/null/子域伪装）、本机 Origin 回显 204、`text/plain` 415、写盘失败 500、SSE 首帧与写入广播（两个订阅者收同一帧）、跨站 SSE 403、四格结构、两套标签、循环格亮起、只提交变化维度、focus 重新对齐、SSE 推送落本地与坏帧容错、`/state` 文案优先、兜底文案与宿主表逐字一致、琥珀样式与隔离线、端口被占时退让到下一个并带 `plugin` 标记。
 
 ## 配套技能
 
@@ -116,9 +116,9 @@ cmd /c mklink /J "D:\AI\DSH-NEXT\skills\clarify-needs" "%CD%\skill\clarify-needs
 
 ## 已知边界
 
-- 档位是**全局**的，不是每会话一份
-- 桥接端口被占时，控件退化为只读（虚线边框 + `!`）：本地点击仍然换档，但**不会同步到宿主**，重启后按宿主里的值走
-- `DSH_CLARIFY_TIER_PORT` 只改宿主端口；客户端 `BRIDGE` 写死 `43871`，改端口要两边一起改
+- **10 个端口全被占**（例如三套 DSH 同开）时，控件退化为只读（虚线边框 + `!`）：本地点击仍然换档，但**不会同步到宿主**，重启后按宿主里的值走
+- `DSH_CLARIFY_TIER_PORT` 只改宿主**起点**，客户端按同区间探测、认 `plugin` 标记，两端不用手工对齐；要改区间宽度得同时改宿主与客户端的 `PORT_SPAN`
+- 状态文件只有一个（`storages/clarify-tier.json`）：并发写按「最后落盘为准」，没有跨进程锁
 - 工具返回的是调用时刻的值；中途改档要再调一次
 - 循环模式不叠加思考档：需要强提问就先退回思考模式
 - 多窗口实时同步：SSE 推送，同一对话两窗同时改动以最后落盘为准；SSE 不可用时退回「切窗口重新对齐」

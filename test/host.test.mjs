@@ -98,7 +98,7 @@ test("轮内冻结：同一轮里点了档，工具仍读开工时那份", async
   const first = await callTool("forge_level", "s-turn", 1);
   assert.equal(first.turnLocked, true);
   assert.equal(first.forge, "off"); // 思考模式
-  // 用户在「我思考时」点成循环·极限
+  // 用户在「我思考时」点成循环·极致
   await setSession("s-turn", "loop", "max");
   const again = await callTool("forge_level", "s-turn", 1);
   assert.equal(again.mode, "think", "同一轮不该换档");

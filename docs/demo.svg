@@ -19,7 +19,7 @@
     <rect x="148" y="88" width="64" height="28" rx="14" fill="#7c6cf0"/>
     <text class="cell on" x="180" y="107" text-anchor="middle">严格</text>
     <rect x="216" y="88" width="64" height="28" rx="14" fill="none" stroke="#7c6cf0" stroke-opacity=".45"/>
-    <text class="cell" x="248" y="107" text-anchor="middle">极限</text>
+    <text class="cell" x="248" y="107" text-anchor="middle">极致</text>
     <line x1="288" y1="92" x2="288" y2="112" stroke="#7f7f8a" stroke-opacity=".6"/>
     <rect x="294" y="88" width="64" height="28" rx="14" fill="none" stroke="#7f7f8a" stroke-opacity=".5"/>
     <text class="mode" x="326" y="107" text-anchor="middle">循环</text>
@@ -32,11 +32,11 @@
     <rect x="148" y="140" width="64" height="28" rx="14" fill="none" stroke="#e08a2e" stroke-opacity=".45"/>
     <text class="cell" x="180" y="159" text-anchor="middle">交付</text>
     <rect x="216" y="140" width="64" height="28" rx="14" fill="#e08a2e"/>
-    <text class="cell on" x="248" y="159" text-anchor="middle">极限</text>
+    <text class="cell on" x="248" y="159" text-anchor="middle">极致</text>
     <line x1="288" y1="144" x2="288" y2="164" stroke="#7f7f8a" stroke-opacity=".6"/>
     <rect x="294" y="140" width="64" height="28" rx="14" fill="#e08a2e"/>
     <text class="mode on" x="326" y="159" text-anchor="middle">循环</text>
   </g>
 
-  <text class="sub" x="32" y="212">关闭 / 严格 / 极限 = 问多深   ·   轻量 / 交付 / 极限 = 磨几轮（3 / 5 / 8）</text>
+  <text class="sub" x="32" y="212">关闭 / 严格 / 极致 = 问多深   ·   轻量 / 交付 / 极致 = 磨几轮（3 / 5 / 8）</text>
 </svg>
