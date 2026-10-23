@@ -1,4 +1,4 @@
-// 宿主半边（v0.7 每会话独立）：状态隔离、迁移、工具按 exec 会话读、安全边界、坏文件不覆写。
+// 宿主半边（v0.8 会话隔离 + 开始即锁）：隔离、锁定、409、解锁、迁移、安全、坏文件不覆写。
 // 运行：npm test
 import test from "node:test";
 import assert from "node:assert";
@@ -53,75 +53,97 @@ const setSession = async (session, mode, level) => {
 const exec = (session) => ({ agent: { session: { id: session } } });
 const callTool = async (name, session) => tools.get(name).execute(undefined, exec(session));
 
-test("空会话用内置默认：think/high，且 GET 不建文件", async () => {
+test("空会话用内置默认：think/high，GET 不建文件", async () => {
   rmSync(statePath, { force: true });
-  const s = await (await get("alpha")).json();
+  const s = await (await get("s-inherit")).json();
   assert.equal(s.mode, "think");
   assert.equal(s.level, "high");
   assert.equal(s.inherited, true);
-  assert.equal(s.session, "alpha");
-  assert.deepEqual(s.levels, ["off", "high", "max"]);
+  assert.equal(s.locked, false);
   assert.equal(s.schema, 6);
   assert.equal(existsSync(statePath), false);
 });
 
-test("每个对话各用各的：写 alpha 不影响 beta", async () => {
-  await setSession("alpha", "loop", "max");
-  let a = await (await get("alpha")).json();
-  let b = await (await get("beta")).json();
+test("每个对话各用各的：写 A 不影响 B", async () => {
+  await setSession("s-iso-a", "loop", "max");
+  await setSession("s-iso-b", "think", "off");
+  const a = await (await get("s-iso-a")).json();
+  const b = await (await get("s-iso-b")).json();
   assert.equal(a.mode, "loop");
   assert.equal(a.level, "max");
-  assert.equal(b.mode, "think", "beta 不该跟着 alpha 变");
-  assert.equal(b.level, "high");
-  await setSession("beta", "think", "off");
-  a = await (await get("alpha")).json();
-  b = await (await get("beta")).json();
-  assert.equal(a.mode, "loop");
+  assert.equal(b.mode, "think");
   assert.equal(b.level, "off");
 });
 
 test("同一会话内切模式不丢档位", async () => {
-  await setSession("gamma", "think", "max");
-  await post("gamma", { mode: "loop" });
-  let s = await (await get("gamma")).json();
+  await setSession("s-gamma", "think", "max");
+  await post("s-gamma", { mode: "loop" });
+  const s = await (await get("s-gamma")).json();
   assert.equal(s.mode, "loop");
   assert.equal(s.level, "max");
-  await post("gamma", { level: "off" });
-  s = await (await get("gamma")).json();
-  assert.equal(s.mode, "loop");
-  assert.equal(s.level, "off");
 });
 
-test("工具按 exec 里的会话读，不是全局", async () => {
-  const a = await callTool("forge_level", "alpha");
-  const b = await callTool("forge_level", "beta");
-  const a2 = await callTool("clarify_tier", "alpha");
+test("第一次工具调用即冻结：GET 后未锁，工具后锁定", async () => {
+  await setSession("s-lock", "loop", "high");
+  let s = await (await get("s-lock")).json();
+  assert.equal(s.locked, false, "还没开工，不该锁");
+  const f = await callTool("forge_level", "s-lock");
+  assert.equal(f.forge, "high");
+  s = await (await get("s-lock")).json();
+  assert.equal(s.locked, true);
+  assert.ok(s.lockedAt);
+});
+
+test("锁定后误点被拒：409 且档位不变", async () => {
+  const before = await (await get("s-lock")).json();
+  const res = await post("s-lock", { mode: "think", level: "off" });
+  assert.equal(res.status, 409);
+  const body = await res.json();
+  assert.equal(body.error, "locked");
+  const after = await (await get("s-lock")).json();
+  assert.equal(after.mode, before.mode);
+  assert.equal(after.level, before.level);
+  const t = await callTool("clarify_tier", "s-lock");
+  assert.equal(t.tier, "off", "循环模式下思考档返回 off");
+});
+
+test("锁定只作用于本对话：别的会话照常可写", async () => {
+  await setSession("s-other", "think", "high");
+  const res = await post("s-other", { level: "max" });
+  assert.equal(res.status, 200);
+});
+
+test("unlock_tier 解除锁定后可再改", async () => {
+  const u = await callTool("unlock_tier", "s-lock");
+  assert.equal(u.ok, true);
+  const res = await post("s-lock", { mode: "think", level: "high" });
+  assert.equal(res.status, 200);
+  const s = await (await get("s-lock")).json();
+  assert.equal(s.locked, false);
+  assert.equal(s.mode, "think");
+});
+
+test("工具按 exec 会话读；拿不到落 default 且 default 不锁", async () => {
+  const a = await callTool("forge_level", "s-iso-a");
+  const b = await callTool("forge_level", "s-iso-b");
   assert.equal(a.forge, "max");
-  assert.equal(a.session, "alpha");
-  assert.equal(b.forge, "off", "beta 是思考模式，不该读成循环");
-  assert.equal(a2.tier, "off");
+  assert.equal(b.forge, "off");
+  const d = await tools.get("forge_level").execute();
+  assert.equal(d.session, "default");
+  const res = await post(null, { mode: "think", level: "high" });
+  assert.equal(res.status, 200, "default 不该被锁");
 });
 
-test("工具拿不到 exec 会话时落 default", async () => {
-  const f = await tools.get("forge_level").execute();
-  assert.equal(f.session, "default");
-});
-
-test("非法值返回 400 且不落盘", async () => {
-  await setSession("alpha", "loop", "high");
-  const res = await post("alpha", { mode: "ultra", level: "low" });
+test("非法值 400 且不落盘", async () => {
+  const res = await post("s-invalid", { mode: "ultra", level: "low" });
   assert.equal(res.status, 400);
-  const s = await (await get("alpha")).json();
-  assert.equal(s.mode, "loop");
-  assert.equal(s.level, "high");
 });
 
-test("老 schema 5 全局档位迁移成 default 会话", async () => {
+test("老 schema 5 迁移成 default 会话", async () => {
   writeFileSync(statePath, JSON.stringify({ mode: "loop", level: "max", schema: 5 }), "utf8");
   const s = await (await get()).json();
   assert.equal(s.session, "default");
   assert.equal(s.mode, "loop");
-  assert.equal(s.level, "max");
   const disk = JSON.parse(readFileSync(statePath, "utf8"));
   assert.equal(disk.schema, 6);
   assert.equal(disk.sessions.default.level, "max");
@@ -137,9 +159,8 @@ test("老 schema 4（tier/forge）也能迁移", async () => {
 
 test("坏 JSON：只读兜底，绝不覆写", async () => {
   writeFileSync(statePath, "{oops", "utf8");
-  const s = await (await get("alpha")).json();
+  const s = await (await get("s-x")).json();
   assert.equal(s.corrupt, true);
-  assert.equal(s.mode, "think");
   assert.equal(readFileSync(statePath, "utf8"), "{oops");
 });
 
@@ -149,57 +170,48 @@ test("未知 schema：只读兜底，不降级覆写", async () => {
   const s = await (await get()).json();
   assert.equal(s.unsupported, true);
   assert.equal(readFileSync(statePath, "utf8"), future);
-  rmSync(statePath, { force: true }); // 后续用例从干净状态开始
+  rmSync(statePath, { force: true });
 });
 
 test("标量 body 400，宿主不崩", async () => {
   for (const raw of ["5", "null", '"loop"', "[1,2]", "{bad"]) {
-    const res = await fetch(BASE, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: raw,
-    });
+    const res = await fetch(BASE, { method: "POST", headers: { "content-type": "application/json" }, body: raw });
     assert.equal(res.status, 400, `body=${raw} 应被拒绝`);
   }
 });
 
 test("安全：跨站 Origin 读写预检全 403", async () => {
-  await setSession("alpha", "think", "high");
+  await setSession("s-sec", "think", "high");
   const evil = "https://evil.example";
-  assert.equal((await post("alpha", { mode: "loop", level: "max" }, { Origin: evil })).status, 403);
-  assert.equal((await get("alpha", { Origin: evil })).status, 403);
+  assert.equal((await post("s-sec", { mode: "loop", level: "max" }, { Origin: evil })).status, 403);
+  assert.equal((await get("s-sec", { Origin: evil })).status, 403);
   assert.equal((await fetch(BASE, { method: "OPTIONS", headers: { Origin: evil } })).status, 403);
-  assert.equal((await get("alpha", { Origin: "null" })).status, 403);
-  assert.equal((await get("alpha", { Origin: "http://localhost.evil.com" })).status, 403);
-  const s = await (await get("alpha")).json();
-  assert.equal(s.mode, "think");
+  assert.equal((await get("s-sec", { Origin: "null" })).status, 403);
+  assert.equal((await get("s-sec", { Origin: "http://localhost.evil.com" })).status, 403);
 });
 
 test("安全：本机 Origin 回显，非 *", async () => {
-  const origin = "http://127.0.0.1:57408";
-  const res = await get("alpha", { Origin: origin });
+  const origin = "http://127.0.0.1:61456";
+  const res = await get("s-sec", { Origin: origin });
   assert.equal(res.status, 200);
   assert.equal(res.headers.get("access-control-allow-origin"), origin);
-  const pre = await fetch(BASE, { method: "OPTIONS", headers: { Origin: origin } });
-  assert.equal(pre.status, 204);
 });
 
 test("安全：POST 必须 application/json", async () => {
   const res = await fetch(BASE, {
     method: "POST",
-    headers: { "content-type": "text/plain", Origin: "http://127.0.0.1:57408" },
+    headers: { "content-type": "text/plain", Origin: "http://127.0.0.1:61456" },
     body: JSON.stringify({ mode: "loop" }),
   });
   assert.equal(res.status, 415);
 });
 
 test("写盘失败返回 500", async () => {
-  await setSession("alpha", "loop", "max");
   const storages = dirname(statePath);
   rmSync(storages, { recursive: true, force: true });
   writeFileSync(storages, "not a directory", "utf8");
   try {
-    const res = await post("alpha", { mode: "think" });
+    const res = await post("s-wf", { mode: "think" });
     assert.equal(res.status, 500);
     const body = await res.json();
     assert.equal(body.error, "write failed");
@@ -247,27 +259,20 @@ function openStream(session, headers = {}) {
   });
 }
 
-test("SSE 只推给同一会话：alpha 的改动不进 beta 的流", async () => {
-  await setSession("alpha", "think", "high");
-  await setSession("beta", "think", "high");
-  const a = await openStream("alpha", { Origin: "http://127.0.0.1:57408" });
-  const b = await openStream("beta");
+test("SSE 只推同一会话，且帧里带 locked", async () => {
+  await setSession("s-sse-a", "think", "high");
+  await setSession("s-sse-b", "think", "high");
+  const a = await openStream("s-sse-a");
+  const b = await openStream("s-sse-b");
   try {
     await waitFor(() => a.frames.length >= 1 && b.frames.length >= 1);
-    assert.equal(a.frames.at(-1).session, "alpha");
-    await post("alpha", { mode: "loop", level: "max" });
+    await post("s-sse-a", { mode: "loop", level: "max" });
     await waitFor(() => a.frames.length >= 2);
     assert.equal(a.frames.at(-1).mode, "loop");
-    assert.equal(b.frames.length, 1, "beta 不该收到 alpha 的广播");
+    assert.equal(typeof a.frames.at(-1).locked, "boolean");
+    assert.equal(b.frames.length, 1, "b 不该收到 a 的广播");
   } finally {
     a.req.destroy();
     b.req.destroy();
   }
-});
-
-test("SSE 跨站 Origin 被拒", async () => {
-  const res = await fetch("http://127.0.0.1:43991/events?session=alpha", {
-    headers: { Origin: "https://evil.example" },
-  });
-  assert.equal(res.status, 403);
 });

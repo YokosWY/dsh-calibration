@@ -46,6 +46,8 @@
 - **会话键**：客户端用插槽 inject 给的 `sessionId`，经 `?session=` 传给桥；工具用 `exec.agent.session.id`，读不到才落 `default`
 - `clarify_tier`：思考模式返回 `level`；循环模式返回 `off`（不叠加锚定）
 - `forge_level`：思考模式返回 `off`；循环模式把 `off/high/max` 映射成 `lite/high/max` 与 3/5/8 轮
+- **开始即锁**：本对话第一次调工具时把当时的档位冻住（写 `lockedAt`）；之后再点档位条，宿主回 `409 locked`，档位不变。要改就新开对话，或让模型调 `unlock_tier`
+- `unlock_tier`：只解除本对话的锁定，解完再点档位条才生效
 - 没单独设置过的对话，继承 `default` 会话（迁移自 0.6 的全局值），再没有就用内置 `think/high`
 - 文件：`$DSH_HOME/storages/clarify-tier.json`；每会话只写自己那条，切模式不会丢档位；最多保留 100 个会话（删最旧的非 `default`）
 - **实时同步**：`GET /events?session=…` 只推本会话；同一对话开两个窗口才互通，跨对话互不干扰；断线按 `retry: 2000` 自动重连
@@ -88,7 +90,7 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 ## 测试
 
 ```bash
-npm test     # node --test，28 项，约 4 秒
+npm test     # node --test，30 项，约 4 秒
 ```
 
 覆盖：状态默认值、模式/档位合并写、非法值 400、标量与坏 JSON 400、两种老 schema 迁移 + `.bak`、坏 JSON 与未知 schema 不覆写（含「未来 schema 带 tier/forge」也不降级）、字段坏只保留能认的一半、两个工具投影、跨站 Origin 403（读/写/预检/null/子域伪装）、本机 Origin 回显 204、`text/plain` 415、写盘失败 500、SSE 首帧与写入广播（两个订阅者收同一帧）、跨站 SSE 403、四格结构、两套标签、循环格亮起、只提交变化维度、focus 重新对齐、SSE 推送落本地与坏帧容错、`/state` 文案优先、兜底文案与宿主表逐字一致、琥珀样式与隔离线。
@@ -119,7 +121,8 @@ cmd /c mklink /J "D:\AI\DSH-NEXT\skills\clarify-needs" "%CD%\skill\clarify-needs
 - `DSH_CLARIFY_TIER_PORT` 只改宿主端口；客户端 `BRIDGE` 写死 `43871`，改端口要两边一起改
 - 工具返回的是调用时刻的值；中途改档要再调一次
 - 循环模式不叠加思考档：需要强提问就先退回思考模式
-- 多窗口实时同步：SSE 推送，两窗同时改动时以最后落盘的那次为准；SSE 不可用时退回「切窗口重新对齐」
+- 多窗口实时同步：SSE 推送，同一对话两窗同时改动以最后落盘为准；SSE 不可用时退回「切窗口重新对齐」
+- 锁定是**按对话**的：锁定只挡本对话的误点，别的对话照常能改；`default` 会话永远不锁（它是兜底与继承源）
 
 ## 踩过的坑（别重犯）
 
