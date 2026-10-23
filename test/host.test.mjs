@@ -63,6 +63,22 @@ test("端口被占时自动退到下一个，并在 /state 带 plugin 标记", a
   assert.equal(s.plugin, "dsh-clarify-tier");
 });
 
+test("POST 响应直接带 pending / turnLocked（客户端少发一次 GET）", async () => {
+  const first = await (await post("s-post", { level: "max" })).json();
+  assert.equal(first.ok, true);
+  assert.equal(first.mode, "think");
+  assert.equal(first.level, "max");
+  assert.equal(first.pending, false);
+  assert.equal(first.turnLocked, false);
+
+  // 本轮已有快照（turn 5），再改档就是「下轮生效」
+  await callTool("clarify_tier", "s-post", 5);
+  const locked = await (await post("s-post", { level: "off" })).json();
+  assert.equal(locked.level, "off");
+  assert.equal(locked.turnLocked, true);
+  assert.equal(locked.pending, true, "响应里要带 pending，客户端才能不补 GET");
+});
+
 test("空会话用内置默认：think/high，GET 不建文件", async () => {
   rmSync(statePath, { force: true });
   const s = await (await get("s-inherit")).json();

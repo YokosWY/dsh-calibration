@@ -12,12 +12,15 @@ const here = dirname(fileURLToPath(import.meta.url));
 const tick = (ms = 20) => new Promise((r) => setTimeout(r, ms));
 const CODE = readFileSync(join(here, "..", "lib", "client.js"), "utf8");
 
-function boot(remote = { mode: "think", level: "high", plugin: "dsh-clarify-tier" }) {
+function boot(remote = { mode: "think", level: "high", plugin: "dsh-clarify-tier" }, options = {}) {
   const registerCalls = [];
   const posts = [];
+  const debugs = [];
+  const fetches = [];
   const listeners = [];
   const streams = [];
   const store = new Map();
+  if (options.local) for (const [k, v] of Object.entries(options.local)) store.set(k, String(v));
   class FakeEventSource {
     constructor(url) {
       this.url = url;
@@ -59,11 +62,18 @@ function boot(remote = { mode: "think", level: "high", plugin: "dsh-clarify-tier
     },
     fetch: (url, init) => {
       const method = (init && init.method) || "GET";
+      const target = String(url);
+      fetches.push({ url: target, method });
+      if (target.includes("/debug")) {
+        debugs.push(JSON.parse(init.body));
+        return Promise.resolve({ ok: true, status: 204, json: () => Promise.resolve(null) });
+      }
       if (method === "POST") {
         posts.push(JSON.parse(init.body));
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(options.postBody || {}) });
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...remote }) });
+      if (options.failGet) return Promise.reject(new Error("ECONNREFUSED"));
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...remote }) });
     },
     console,
     Promise,
@@ -89,6 +99,8 @@ function boot(remote = { mode: "think", level: "high", plugin: "dsh-clarify-tier
     mod,
     store,
     posts,
+    debugs,
+    fetches,
     registerCalls,
     loadedId: sandbox.__loaded.id,
     listeners,
@@ -200,4 +212,88 @@ test("会话隔离：不同对话各存各的键，桥地址带 session", async 
   const { resolveSession, bridgeUrl } = env.mod.__internals;
   assert.equal(resolveSession({ sessionId: "s-x" }), "s-x");
   assert.match(bridgeUrl("s x", "/events"), /\?session=s%20x$/);
+});
+
+test("桥不可达：只探一遍端口，TTL 内再点不再重扫", async () => {
+  const env = boot({ mode: "think", level: "high" }, { failGet: true });
+  env.mod.__internals.CONFIG.portMissTtl = 60000;
+  const tree = env.render();
+  await tick(30);
+  const probes = () => env.fetches.filter((f) => f.url.includes("session=probe")).length;
+  assert.equal(probes(), 10, "10 个端口扫一遍；挂载时 pull 与 SSE 并发，不能各扫一遍");
+  tree.children[0].props.onClick();
+  await tick(30);
+  assert.equal(probes(), 10, "TTL 内点击不该再扫一遍端口");
+});
+
+test("宿主在 POST 响应里带 pending 时，点一次档只发一次请求", async () => {
+  const env = boot(
+    { mode: "think", level: "high", plugin: "dsh-clarify-tier" },
+    { postBody: { ok: true, session: "s-alpha", mode: "think", level: "off", pending: false, turnLocked: true } },
+  );
+  const tree = env.render();
+  await tick(30);
+  const stateGets = () => env.fetches.filter((f) => f.method === "GET" && f.url.includes("/state")).length;
+  const before = stateGets();
+  tree.children[0].props.onClick();
+  await tick(30);
+  assert.equal(stateGets(), before, "POST 已带结果，不该再补一次 GET");
+  assert.deepEqual(env.posts.at(-1), { level: "off" });
+});
+
+test("宿主 POST 不带 pending（老宿主）时退回拉一次", async () => {
+  const env = boot();
+  const tree = env.render();
+  await tick(30);
+  const stateGets = () => env.fetches.filter((f) => f.method === "GET" && f.url.includes("/state")).length;
+  const before = stateGets();
+  tree.children[0].props.onClick();
+  await tick(30);
+  assert.equal(stateGets(), before + 1, "老宿主缺 pending，应补一次 GET");
+});
+
+test("SSE 被彻底关掉后自动重建，且不超过 maxReconnects", async () => {
+  const env = boot();
+  const conf = env.mod.__internals.CONFIG;
+  conf.reconnectDelay = 5;
+  conf.maxReconnects = 2;
+  env.render();
+  await tick(40);
+  assert.equal(env.streams.length, 1, "挂载应建立一条 SSE");
+
+  env.streams[0].readyState = 2;
+  env.streams[0].onerror();
+  await tick(40);
+  assert.equal(env.streams.length, 2, "彻底断开后应重建");
+
+  env.streams[1].readyState = 2;
+  env.streams[1].onerror();
+  await tick(40);
+  assert.equal(env.streams.length, 3, "第二次重建");
+
+  env.streams[2].readyState = 2;
+  env.streams[2].onerror();
+  await tick(40);
+  assert.equal(env.streams.length, 3, "达到上限后不再重建");
+});
+
+test("诊断默认关闭，localStorage 打标后才写 jsonl", async () => {
+  const off = boot();
+  off.render();
+  await tick(20);
+  assert.equal(off.debugs.length, 0, "默认不该往宿主写诊断");
+
+  const on = boot({ mode: "think", level: "high" }, { local: { "dsh-tier-debug": "1" } });
+  on.render();
+  await tick(20);
+  assert.ok(on.debugs.some((d) => d.event === "registered"), "打标后应回报注册事件");
+});
+
+test("离线与待生效同时成立时，title 两件事都说", () => {
+  const { barTitle } = boot().mod.__internals;
+  const both = barTitle(true, true, false);
+  assert.match(both, /离线/);
+  assert.match(both, /下一轮生效/);
+  assert.equal(barTitle(false, false, true), "循环模式");
+  assert.equal(barTitle(false, false, false), "思考模式");
 });

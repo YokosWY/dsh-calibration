@@ -3,6 +3,21 @@
 > GitHub Release 直接取用。更早版本（0.1.0–1.1.1）的逐条记录见 `CHANGELOG.md`。
 > 写法约定：只写机制、范围、限制、数字；不写形容词与口号。
 
+## v1.3.0 — 少一次请求，断线能自己回来
+
+**本次改动**
+
+- **点一次档只发一个 POST**：宿主在 POST `/state` 的响应里直接回带 `mode/level/pending/turnLocked`，客户端不再补 GET。老宿主（1.2.0 及以前）不回 `pending`，客户端自动退回「POST + GET」，行为不变。
+- **端口发现退避**：一轮 10 个端口全探空后记下时间，3 秒内点击不再重扫（原来每次交互都要打 10 个 fetch）；挂载时 `pull` 与 SSE 并发要端口，改为同一时刻只跑一轮发现。
+- **端口缓存会作废**：GET 拿到非 2xx（端口上是别的实例）、网络错误、SSE 彻底断开，都清掉缓存的端口，下次重新发现。原来宿主重启换了端口，客户端会一直指着旧端口。
+- **SSE 断线重建**：`readyState=2` 时浏览器不再自己重连，客户端按 `CONFIG.reconnectDelay`（默认 2 秒）重建，最多 `CONFIG.maxReconnects`（默认 3）次，收到消息即重置计数。
+- **诊断默认关**：不再每次启动往 `clarify-tier-debug.jsonl` 追加事件（文件不轮转）。要抓注册链路时执行 `localStorage.setItem("dsh-tier-debug","1")` 再刷新，用完删掉。
+- 客户端三处重复的落值逻辑收成 `applyState()`；容器 title 由 `barTitle()` 统一生成，离线与「下一轮生效」同时成立时两句话都写。
+
+**验证**：`npm run verify` 通过，45 项测试，约 4 秒（新增 7 项：端口退避与去重、POST 带回状态不补 GET、老宿主补 GET、SSE 重建上限、诊断闸门、title 双状态、POST 响应带 `turnLocked`）。
+
+**升级**：完全退出 DSH 再打开。
+
 ## v1.2.1 — 文案收尾
 
 **修什么**
