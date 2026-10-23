@@ -1,0 +1,29 @@
+{
+  "name": "@local/dsh-clarify-tier",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "description": "需求锚定档位滑条：把 clarify-needs 的 off/low/high/max/ultra 做成输入框工具行控件，并与宿主状态、clarify_tier 工具打通。",
+  "license": "MIT",
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  }
+}
