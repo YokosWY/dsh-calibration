@@ -3,7 +3,7 @@
 > 动手之前先定档：轻活不打扰，重活问到没有假设。
 > 五档：**off 静默 / low 方向 / high 约束 / max 落地 / ultra 拷问**。
 > **独立项目**：仓库 `dsh-clarify-tier` 的 `skill/clarify-needs/`；不并入 Token-Governance（TG）。
-> **预发布**：档位体系刚定型，升级可能不兼容。
+> **版本**：v3.0，2026-10-23 起独立发布，随 [dsh-clarify-tier](https://github.com/YokosWY/dsh-clarify-tier) 仓库发版。
 
 - 版本：**v3.0-pre**（预发：档位体系刚换成五档，仍可能调整）
 - 技能名：`clarify-needs`（常驻，模型目录可见）
