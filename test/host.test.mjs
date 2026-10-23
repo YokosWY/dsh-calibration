@@ -129,7 +129,7 @@ test("未知 schema 即使带 tier/forge 也不许降级覆盖", async () => {
 });
 
 test("标量 body 返回 400，宿主不崩", async () => {
-  for (const raw of ["5", "null", '"loop"', "[1,2]"]) {
+  for (const raw of ["5", "null", '"loop"', "[1,2]", "{bad"]) {
     const res = await fetch(BASE, {
       method: "POST",
       headers: { "content-type": "application/json" },
