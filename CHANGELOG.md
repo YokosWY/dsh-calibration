@@ -1,5 +1,8 @@
 # 变更记录
 
+## 0.1.3 — 2026-10-23
+- 移除界面截图 `docs/preview.png`（改由 `docs/demo.svg` 演示）；README 同步去掉该图
+
 ## 0.1.2 — 2026-10-23
 - README 加徽章（release / license / platform / node）
 - 加安装演示动图 `docs/demo.svg`（五档循环点亮，无需截图）

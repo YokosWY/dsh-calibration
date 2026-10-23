@@ -10,8 +10,6 @@
 
 ![demo](docs/demo.svg)
 
-![preview](docs/preview.png)
-
 ## 它解决什么
 
 模型接任务时的"问多深"通常靠临场判断：琐事被追问三轮，重活却只确认一句。
