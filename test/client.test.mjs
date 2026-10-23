@@ -92,7 +92,10 @@ function boot(remote = { mode: "think", level: "high" }) {
     loadedId: sandbox.__loaded.id,
     listeners,
     streams,
-    render: () => registerCalls[0].comp().type(),
+    render: (sessionId = "s-alpha") => {
+      const el = registerCalls[0].comp({ sessionId });
+      return el.type(el.props);
+    },
   };
 }
 
@@ -120,7 +123,7 @@ test("思考模式：3 档 + 1 隔离线 + 1 循环，标签二字", () => {
 
 test("循环模式：标签换成循环档，循环格亮起", () => {
   const env = boot();
-  env.store.set("dsh-tier-mode", JSON.stringify({ mode: "loop", level: "max" }));
+  env.store.set("dsh-tier-mode:s-alpha", JSON.stringify({ mode: "loop", level: "max" }));
   const tree = env.render();
   assert.equal(tree.props["data-mode"], "loop");
   const labels = tree.children.slice(0, 3).map((c) => c.children[0]);
@@ -139,9 +142,9 @@ test("用 SSE 接收其他窗口的改动并落本地", () => {
   const env = boot();
   env.render();
   assert.equal(env.streams.length, 1, "应建立一条 SSE 连接");
-  assert.match(env.streams[0].url, /\/events$/);
+  assert.match(env.streams[0].url, /\/events\?session=s-alpha$/);
   env.streams[0].onmessage({ data: JSON.stringify({ mode: "loop", level: "max" }) });
-  assert.deepEqual(JSON.parse(env.store.get("dsh-tier-mode")), { mode: "loop", level: "max" });
+  assert.deepEqual(JSON.parse(env.store.get("dsh-tier-mode:s-alpha")), { mode: "loop", level: "max" });
   env.streams[0].onmessage({ data: "{bad" }); // 坏帧不许抛
 });
 
@@ -174,4 +177,18 @@ test("样式：循环模式琥珀、隔离线存在", () => {
   assert.match(CSS, /data-mode='loop'\] \.dct-cell\[data-on='1'\]\{background:#e08a2e\}/);
   assert.match(CSS, /\.dct-sep\{/);
   assert.match(CSS, /\.dct-mode\[data-on='1'\]/);
+});
+
+test("会话隔离：不同对话各存各的键，桥地址带 session", () => {
+  const env = boot();
+  const a = env.render("s-alpha");
+  env.render("s-beta").children[0].props.onClick();
+  assert.deepEqual(env.posts.at(-1), { level: "off" });
+  env.store.set("dsh-tier-mode:s-beta", JSON.stringify({ mode: "loop", level: "max" }));
+  const b = env.render("s-beta");
+  assert.equal(b.props["data-mode"], "loop", "beta 用自己的本地值");
+  assert.equal(a.props["data-mode"], "think", "alpha 不该被 beta 影响");
+  const { resolveSession, bridgeUrl } = env.mod.__internals;
+  assert.equal(resolveSession({ sessionId: "s-x" }), "s-x");
+  assert.match(bridgeUrl("s x", "/events"), /\?session=s%20x$/);
 });

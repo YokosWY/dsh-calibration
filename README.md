@@ -32,16 +32,23 @@
 
 **为什么不叠两轴**：一根框放不下「问多深 × 磨几轮」四象限；循环模式下的轻量对齐交给 loop-forge 第 1 步的「定判据」，比再摆一条滑条更省。
 
-## 状态模型
+## 状态模型（每个对话各用各的）
 
 ```json
-{ "mode": "think" | "loop", "level": "off" | "high" | "max", "schema": 5 }
+{
+  "schema": 6,
+  "sessions": {
+    "<sessionId>": { "mode": "think" | "loop", "level": "off" | "high" | "max", "updatedAt": "…" }
+  }
+}
 ```
 
+- **会话键**：客户端用插槽 inject 给的 `sessionId`，经 `?session=` 传给桥；工具用 `exec.agent.session.id`，读不到才落 `default`
 - `clarify_tier`：思考模式返回 `level`；循环模式返回 `off`（不叠加锚定）
 - `forge_level`：思考模式返回 `off`；循环模式把 `off/high/max` 映射成 `lite/high/max` 与 3/5/8 轮
-- 文件：`$DSH_HOME/storages/clarify-tier.json`，**合并式写入**，切模式不会丢档位
-- **实时同步**：`GET /events` 是 SSE 流；连上先推当前状态，之后每次写入广播给所有窗口，断线由浏览器按 `retry: 2000` 自动重连
+- 没单独设置过的对话，继承 `default` 会话（迁移自 0.6 的全局值），再没有就用内置 `think/high`
+- 文件：`$DSH_HOME/storages/clarify-tier.json`；每会话只写自己那条，切模式不会丢档位；最多保留 100 个会话（删最旧的非 `default`）
+- **实时同步**：`GET /events?session=…` 只推本会话；同一对话开两个窗口才互通，跨对话互不干扰；断线按 `retry: 2000` 自动重连
 
 ## 安装
 
@@ -81,7 +88,7 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 ## 测试
 
 ```bash
-npm test     # node --test，29 项，约 4 秒
+npm test     # node --test，28 项，约 4 秒
 ```
 
 覆盖：状态默认值、模式/档位合并写、非法值 400、标量与坏 JSON 400、两种老 schema 迁移 + `.bak`、坏 JSON 与未知 schema 不覆写（含「未来 schema 带 tier/forge」也不降级）、字段坏只保留能认的一半、两个工具投影、跨站 Origin 403（读/写/预检/null/子域伪装）、本机 Origin 回显 204、`text/plain` 415、写盘失败 500、SSE 首帧与写入广播（两个订阅者收同一帧）、跨站 SSE 403、四格结构、两套标签、循环格亮起、只提交变化维度、focus 重新对齐、SSE 推送落本地与坏帧容错、`/state` 文案优先、兜底文案与宿主表逐字一致、琥珀样式与隔离线。

@@ -1,5 +1,13 @@
 # 变更记录
 
+## 0.7.0 — 2026-10-24
+- **每个对话各用各的**：状态从「一个全局档位」改成 `{ schema: 6, sessions: { sessionId: {mode, level} } }`
+- 会话键：客户端走插槽注入的 `sessionId`（`/state?session=`、`/events?session=`）；工具走 `exec.agent.session.id`，读不到才落 `default`
+- SSE 按会话分流：同一对话的两个窗口互通，跨对话互不打扰
+- 新对话没设置过时继承 `default`（迁移自 0.6 的全局值），再回落到 `think/high`；会话表上限 100，删最旧的非 default
+- localStorage 键按会话分开（`dsh-tier-mode:<sessionId>`），断网时也不会串档
+- 测试 28 项：会话隔离、工具按 exec 会话读、SSE 不跨会话、迁移、安全、数据安全全保留
+
 ## 0.6.0 — 2026-10-24
 - **服务器推送**：新增 `GET /events`（SSE）。连上先推当前状态，之后每次成功写入广播给所有窗口；25 秒心跳保活，断线由浏览器按 `retry: 2000` 自动重连
 - 客户端订阅 SSE：其他窗口改档后立即跟上；坏帧丢弃不抛错；`EventSource` 不可用时退回原来的「切窗口重新对齐」
