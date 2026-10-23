@@ -5,112 +5,94 @@
 [![platform](https://img.shields.io/badge/DSH-web%20client-7c6cf0)](#安装)
 [![node](https://img.shields.io/badge/node-%E2%89%A522-7c6cf0)](package.json)
 
-> 给 DeepSeek Harness 的输入框加两条分段条：
-> 1. **需求锚定档位** `off / low / high / max`
-> 2. **循环锻造开关** `off / 标准 / 极限`（0.4.0 起）
-> 用户拨档，模型通过 `clarify_tier` / `forge_level` 读到，据此决定「开工前问多深」与「交付后磨几轮」。
+> 给 DSH 输入框加**一根框、两个模式**的档位条：
+> `关 | 严 | 极 ‖ 循环`（思考）↔ `轻 | 交付 | 极限 ‖ 循环`（循环）。
+> 拨档 → 模型通过 `clarify_tier` / `forge_level` 读到 → 决定开工问多深、交付后磨几轮。
 
 ![demo](docs/demo.svg)
 
-仓库两半：
+## 一根框两个模式
 
-| 半边 | 位置 | 是什么 |
-|---|---|---|
-| 插件 | 仓库根目录 | 输入框分段条 + 宿主桥 + `clarify_tier` 工具 |
-| 技能 | [`skill/clarify-needs`](skill/clarify-needs) | 拿到档位之后怎么问：复述 / 确认点 / 设计树 / 共识摘要 |
-
-## 它解决什么
-
-模型接任务时的"问多深"通常靠临场判断：琐事被追问三轮，重活却只确认一句。
-这个控件把档位从隐形变成显式——拨到哪档，这一轮就按哪档的流程走。
-
-## 四档
-
-| 档 | 名词 | 动手前必须交出的东西 | 悬停 |
-|---|---|---|---|
-| **off** | 关闭 | 无（不介入） | 关闭 |
-| **low**（默认） | 常规 | 复述 + 2 确认点 + 风险提示 + 假设清单（≤3） | 常规 |
-| **high** | 严格 | 常规 + 回滚 + 验收标准 + 失败分支 + 前置检查表 | 严格 |
-| **max** | 极限 | 严格 + 反例与代价 + 对抗自检 + 对抗复审（≥3 条） + 止损线 | 极限 |
-
-配套技能 `clarify-needs`（需求锚定流程）在 [token-governance](https://github.com/YokosWY/token-governance) 仓库。
-
-## 循环锻造开关（0.4.0）
-
-锚定条右侧多一格琥珀色分段条，管交付**之后**要不要继续磨：
-
-| 档 | 名词 | 轮次上限 | 评审 |
-|---|---|---|---|
-| **off**（默认） | 关闭 | — | 不自动循环；用户点名「打磨」时按轻档 3 轮、纯自检 |
-| **std** | 标准 | 5 | 第 2 轮独立评审 + 收敛轮复核 |
-| **max** | 极限 | 8 | 第 2 轮起每轮独立评审 |
-
-两条开关**正交叠加**：锚定管开工前，锻造管交付后，互不改写。配套技能 `loop-forge` 装在
-`D:\AI\Skills\mine\loop-forge`（判据先行 → 每轮在对话里报数 → 自动下一轮 → 自动止损）。
-
-```powershell
-cmd /c mklink /J "D:\AI\DSH-NEXT\skills\loop-forge" "D:\AI\Skills\mine\loop-forge"
 ```
+思考：  [关] [严] [极] ‖ [循环]        ← 紫
+循环：  [轻] [交付] [极限] ‖ [循环]亮   ← 琥珀
+```
+
+右侧「循环」用一条隔离线隔开，它是**模式开关**，不是第四档。
+切到循环模式后，前三个格的含义从「问多深」变成「磨几轮」，标签和配色一起换。
+
+| 模式 | 格 | 含义 | 模型读到 |
+|---|---|---|---|
+| 思考 | 关 | 不锚定、不循环 | `clarify_tier=off`、`forge_level=off` |
+| 思考 | 严（默认） | 复述 + 2 确认点 + 回滚 + 验收 + 失败分支 | `clarify_tier=high` |
+| 思考 | 极 | 严 + 反例与代价 + 对抗自检 + 对抗复审 | `clarify_tier=max` |
+| 循环 | 轻 | 3 轮、纯自检（性价比） | `forge_level=lite` |
+| 循环 | 交付 | 5 轮、第 2 轮独立评审 + 收敛复核 | `forge_level=high` |
+| 循环 | 极限 | 8 轮、第 2 轮起每轮独立评审 | `forge_level=max` |
+
+**为什么不叠两轴**：一根框放不下「问多深 × 磨几轮」四象限；循环模式下的轻量对齐交给 loop-forge 第 1 步的「定判据」，比再摆一条滑条更省。
+
+## 状态模型
+
+```json
+{ "mode": "think" | "loop", "level": "off" | "high" | "max", "schema": 5 }
+```
+
+- `clarify_tier`：思考模式返回 `level`；循环模式返回 `off`（不叠加锚定）
+- `forge_level`：思考模式返回 `off`；循环模式把 `off/high/max` 映射成 `lite/high/max` 与 3/5/8 轮
+- 文件：`$DSH_HOME/storages/clarify-tier.json`，**合并式写入**，切模式不会丢档位
 
 ## 安装
 
 需要：DSH Desktop / DSH NEXT（带 Web 客户端插件支持的版本）。
 
 ```powershell
-# DSH_HOME 已设置时（桌面版默认就有）
 pwsh -File install-profile.ps1             # 装进 desktop profile
 pwsh -File install-profile.ps1 -Uninstall  # 卸载
-
-# 没设置 DSH_HOME 时显式指定
-pwsh -File install-profile.ps1 -DshHome "C:\Users\<you>\.dsh"
 ```
 
 脚本做三件事：往 profile 的 `package.json` 加一条 `link:` 依赖、把包名追加进 `dsh.profile.bundles`、
 在 profile 的 `node_modules` 下建链接。装完**完全退出并重开** DSH（关窗口不够，要退出进程）。
 
-验证：输入框工具行、模型选择左边出现**两条**分段条（紫色=需求锚定，琥珀色=循环锻造）；点一档后问模型「档位多少」「锻造档多少」，它应能调 `clarify_tier` / `forge_level` 报出同值。
+验证：输入框工具行、模型选择左边出现一条四格框，默认停在「严」；点最右「循环」，前三格变「轻 / 交付 / 极限」且转琥珀色。再问模型「现在什么档」，它应能调 `clarify_tier` / `forge_level` 报出同值。
 
 ## 工作原理
 
 | 层 | 文件 | 职责 |
 |---|---|---|
-| 客户端 | `lib/client.js` | 两条分段条 UI，注册进 `conversation.input.right` 插槽（`order=10` / `11`，落在模型席左边） |
-| 宿主 | `lib/index.js` | 合并式落盘状态、开本地桥、注册 `clarify_tier` 与 `forge_level` 工具 |
-| 形态 | `cordis.patch.yml` + `package.json` 的 `dsh.client` | 进 cordis 树，客户端产物才会被编进启动包 |
+| 客户端 | `lib/client.js` | 四格框 + 模式切换，注册进 `conversation.input.right`（`order=10`） |
+| 宿主 | `lib/index.js` | 合并式落盘、回环桥、`clarify_tier` 与 `forge_level` 两个只读工具 |
+| 形态 | `cordis.patch.yml` + `package.json` 的 `dsh.client` | 进 cordis 树，客户端产物编进启动包 |
 
 - 桥：`http://127.0.0.1:43871/state`（GET/POST，只绑回环，CORS `*`，端口可用 `DSH_CLARIFY_TIER_PORT` 改）
-- 状态：`$DSH_HOME/storages/clarify-tier.json`，内容是 `{ tier, forge, schema: 4 }`；写入为**合并式**，只改传进来的字段
-- 模型可见通道：`clarify_tier`（锚定档）、`forge_level`（锻造档 + 轮次上限 + 评审方式），都只读
+- 三条纪律：**fail-open**（注册失败只是控件不出现）、**不碰官方 DOM**、**不注入会话消息**
 
-三条纪律：**fail-open**（注册失败只是控件不出现）、**不碰官方 DOM**、**不注入会话消息**。
+## 配套技能
 
-## 技能 clarify-needs
-
-`skill/clarify-needs/` 是一个 DSH 常驻技能：拿到档位后按对应流程执行——静默不介入、方向只对一句、
-约束复述 + 2 确认点、落地复述 + 3 确认点 + 回滚、拷问走设计树直到没有默认假设。
-
-装法（复制或 junction 到技能目录）：
+| 技能 | 位置 | 作用 |
+|---|---|---|
+| clarify-needs | `skill/clarify-needs/` | 拿到思考档后怎么问：复述 / 确认点 / 设计树 / 共识摘要 |
+| loop-forge | `D:\AI\Skills\mine\loop-forge`（junction 到技能目录） | 拿到循环档后怎么磨：判据 → 每轮报数 → 自动下一轮 → 自动止损 |
 
 ```powershell
-# junction：改仓库里的文件立即生效
-cmd /c mklink /J "%USERPROFILE%\.dsh\skills\clarify-needs" "%CD%\skill\clarify-needs"
+cmd /c mklink /J "D:\AI\DSH-NEXT\skills\loop-forge" "D:\AI\Skills\mine\loop-forge"
+cmd /c mklink /J "D:\AI\DSH-NEXT\skills\clarify-needs" "%CD%\skill\clarify-needs"
 ```
-
-技能与插件可各自独立使用：只装技能、靠用户口头说「用 max」也能用；只装插件、模型读到档位但没有技能时也能按档位自行收放。
 
 ## 已知边界
 
-- 档位是**全局**的，不是每会话一份（v0.1 的取舍）
-- 桥接端口被占时，控件退化为只读（虚线边框 + `!`），不刷屏报错
-- `clarify_tier` / `forge_level` 返回的是调用时刻的值；中途改档要再调一次
-- 老宿主只回 `tier` 时，锻造条保持 localStorage 里的值，不显示降级标记（0.4.0 的兼容处理）
+- 档位是**全局**的，不是每会话一份
+- 桥接端口被占时，控件退化为只读（虚线边框 + `!`）
+- 工具返回的是调用时刻的值；中途改档要再调一次
+- 循环模式不叠加思考档：需要强提问就先退回思考模式
 
 ## 踩过的坑（别重犯）
 
 | 坑 | 症状 | 正解 |
 |---|---|---|
-| 客户端 bundle 的 `id` 写成短名 | `duplicate factory registration` → `web boot: 1 entry did not activate` → 整个 GUI 起不来 | `id` 必须等于包名本身（含 `@scope`） |
+| 客户端 bundle 的 `id` 写成短名 | `duplicate factory registration` → `web boot: 1 entry did not activate` → GUI 起不来 | `id` 必须等于包名（含 `@scope`） |
 | 宿主没声明 `inject` | `cannot get property "tools" without inject`，工具静默消失 | `export const inject = ["tools"]` |
+| 两个开关写同一文件不做合并 | 切档把另一轴冲掉 | `writeState` 读旧值再合并 |
 
 ## 卸载
 

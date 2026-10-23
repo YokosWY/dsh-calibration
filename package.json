@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-clarify-tier",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "main": "./lib/index.js",
@@ -9,7 +9,7 @@
     "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },
-  "description": "需求锚定档位滑条：把 clarify-needs 的 off/low/high/max/ultra 做成输入框工具行控件，并与宿主状态、clarify_tier 工具打通。",
+  "description": "一框双模式档位条：思考（关/严/极）与循环（轻/交付/极限）共用一根框，右侧隔离的「循环」切模式，配 clarify_tier 与 forge_level 两个工具。",
   "license": "MIT",
   "files": [
     "lib/index.js",
