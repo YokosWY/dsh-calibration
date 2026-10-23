@@ -46,7 +46,7 @@
 - **会话键**：客户端用插槽 inject 给的 `sessionId`，经 `?session=` 传给桥；工具用 `exec.agent.session.id`，读不到才落 `default`
 - `clarify_tier`：思考模式返回 `level`；循环模式返回 `off`（不叠加锚定）
 - `forge_level`：思考模式返回 `off`；循环模式把 `off/high/max` 映射成 `lite/high/max` 与 3/5/8 轮
-- **每轮快照**：一条用户消息 = 一轮。开工第一次调工具时，把当时的档位记成本轮快照（`turn.id + mode + level`）；本轮内再点档位条只改「下轮的值」，并在条子尾部显示一个琥珀小点（`pending`）
+- **每轮快照**：一条用户消息 = 一轮（轮号取 `agent.phase.turn`）。开工第一次调工具时，把当时的档位记成本轮快照（`turn{id,mode,level}`）；本轮内再点档位条只改「下轮的值」，条尾显示一个琥珀小点（`pending`）
 - 下一轮开工自动换用新值；取不到轮 id 时退回实时值（不做轮内保护，但功能不坏）
 - 没单独设置过的对话，继承 `default` 会话（迁移自 0.6 的全局值），再没有就用内置 `think/high`
 - 文件：`$DSH_HOME/storages/clarify-tier.json`；每会话只写自己那条，切模式不会丢档位；最多保留 100 个会话（删最旧的非 `default`）

@@ -50,7 +50,7 @@ const setSession = async (session, mode, level) => {
   const res = await post(session, { mode, level });
   assert.equal(res.status, 200);
 };
-const exec = (session, turn) => ({ agent: { session: { id: session, turn: turn ? { id: turn } : undefined } } });
+const exec = (session, turn) => ({ agent: { id: session, session: { id: session }, phase: turn === undefined ? undefined : { turn } } });
 const callTool = async (name, session, turn) => tools.get(name).execute(undefined, exec(session, turn));
 
 test("空会话用内置默认：think/high，GET 不建文件", async () => {
@@ -85,12 +85,12 @@ test("同一会话内切模式不丢档位", async () => {
 
 test("轮内冻结：同一轮里点了档，工具仍读开工时那份", async () => {
   await setSession("s-turn", "think", "high");
-  const first = await callTool("forge_level", "s-turn", "turn-1");
+  const first = await callTool("forge_level", "s-turn", 1);
   assert.equal(first.turnLocked, true);
   assert.equal(first.forge, "off"); // 思考模式
   // 用户在「我思考时」点成循环·极限
   await setSession("s-turn", "loop", "max");
-  const again = await callTool("forge_level", "s-turn", "turn-1");
+  const again = await callTool("forge_level", "s-turn", 1);
   assert.equal(again.mode, "think", "同一轮不该换档");
   assert.equal(again.pending, true, "应标记为下轮生效");
   const s = await (await get("s-turn")).json();
@@ -99,7 +99,7 @@ test("轮内冻结：同一轮里点了档，工具仍读开工时那份", async
 });
 
 test("轮间生效：下一轮用新档", async () => {
-  const next = await callTool("forge_level", "s-turn", "turn-2");
+  const next = await callTool("forge_level", "s-turn", 2);
   assert.equal(next.mode, "loop");
   assert.equal(next.forge, "max");
   assert.equal(next.pending, false);

@@ -1,5 +1,12 @@
 # 变更记录
 
+## 1.0.0 — 2026-10-24
+- **轮 id 实测定案**：`agent.phase.turn`（探针实测 `{kind:"running", turn:15, step:1}`），轮内快照终于能落地
+- 轮语义：同一 `phase.turn` 内只用开工时那份；`phase.turn` 变化即新一轮，自动换用当前值
+- 移除临时工具 `debug_probe`（工具面回到 `clarify_tier` / `forge_level` 两个）
+- 保留 `POST /debug` 诊断通道（客户端注册事件仍可查）
+- 之前的调试链路全部留档：CORS（0.9.2）→ 插槽注册确认（0.9.3）→ 轮 id（1.0.0）
+
 ## 0.9.3 — 2026-10-24
 - 客户端确认注册成功（`inject-fired` + `registered` → `conversation.input.right`）
 - `debug_probe` 返回改成 JSON 安全（修 lossless JSON 报错），同时把探测结果写进宿主日志
