@@ -1,5 +1,13 @@
 # 变更记录
 
+## 1.4.0 — 2026-10-24
+- **宿主拆模块**：`lib/index.js` 693 行 → 装配层 ~80 行，逻辑分到 `core.js`（常量/文案/会话键/广播总线）、`state.js`（读写与迁移）、`bridge.js`（HTTP + SSE + 端口退让）、`tools.js`（两个工具 + 轮内快照）。**对外导出不变**：`apply` / `inject` / `TIER_LABELS` / `TIER_TITLES` / `publicState` / `turnIdFromExec` 等照旧从 `lib/index.js` 拿
+- **客户端保持单文件**：模块加载器只吃一个 factory，拆 import 会直接起不来；去重靠内部 `applyState()`，不靠拆文件
+- **广播改成总线**：原来 `let broadcaster` + `startBridge` 反向赋值；现在 `core.js` 的 `setBroadcaster()` / `emit()`，桥与工具互不 import
+- **lint 真查全量**：`scripts/check.mjs` 遍历 `lib/*.js`、`test/*.mjs` 与自身逐个 `node --check`，不再手写三个文件名
+- **发版面**：`package.json` 的 `files` 改成 `lib/`、`scripts`；新增守则「`lib` 下每个模块都被 files 覆盖」，漏加文件会在测试里炸
+- 测试 45 → 46；`npm run verify` 通过
+
 ## 1.3.0 — 2026-10-24
 - **点一次档省一次请求**：宿主 POST `/state` 的响应改成带 `pending` / `turnLocked`（原来只回 `{ok,session,mode,level}`），客户端拿到就不用再补一次 GET；老宿主不回 `pending` 时自动退回拉取，行为不变
 - **端口发现退避**：一轮 10 个端口全探空后记时间，3 秒内点击不再重扫（原来每次交互都要打 10 个 fetch）；挂载时 pull 与 SSE 同时要端口，改为同一时刻只跑一轮发现

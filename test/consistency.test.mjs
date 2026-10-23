@@ -11,6 +11,10 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
 const read = (...p) => readFileSync(join(root, ...p), "utf8");
 const pkg = JSON.parse(read("package.json"));
+const libFiles = readdirSync(join(root, "lib"))
+  .filter((f) => f.endsWith(".js"))
+  .sort()
+  .map((f) => `lib/${f}`);
 
 test("版本号与 CHANGELOG 首条一致", () => {
   const first = read("CHANGELOG.md").match(/^## (\d+\.\d+\.\d+)/m);
@@ -24,8 +28,16 @@ test("发布面文件都在（package.json files 清单）", () => {
   }
 });
 
+test("lib 下每个模块都被 files 清单覆盖", () => {
+  const covered = new Set(pkg.files);
+  for (const file of libFiles) {
+    const dir = file.split("/")[0] + "/";
+    assert.ok(covered.has(file) || covered.has(dir), `${file} 没进 package.json files，发版会缺文件`);
+  }
+});
+
 test("当前文案统一叫「极致」，历史记录除外", () => {
-  for (const f of ["lib/index.js", "lib/client.js", "docs/demo.svg"]) {
+  for (const f of [...libFiles, "docs/demo.svg"]) {
     assert.ok(!read(f).includes("极限"), `${f} 里还有旧名「极限」`);
   }
   assert.ok(pkg.description.includes("极致"), "package.json 描述没提到「极致」");
@@ -33,9 +45,10 @@ test("当前文案统一叫「极致」，历史记录除外", () => {
 });
 
 test("clarify_tier 的工具描述与宿主档位表同字", () => {
-  const m = read("lib/index.js").match(/name: "clarify_tier",\s*description:\s*\n?\s*"([^"]+)"/);
-  assert.ok(m, "找不到 clarify_tier 的描述");
-  assert.ok(m[1].includes("关闭/严格/极致"), `工具描述没跟档位表对齐：${m[1]}`);
+  const hit = libFiles.map((f) => [f, read(f).match(/name: "clarify_tier",\s*description:\s*\n?\s*"([^"]+)"/)]).find(([, m]) => m);
+  assert.ok(hit, "lib 下找不到 clarify_tier 的描述");
+  const [file, m] = hit;
+  assert.ok(m[1].includes("关闭/严格/极致"), `${file} 的工具描述没跟档位表对齐：${m[1]}`);
 });
 
 test("skill 的当前状态表用「极致」", () => {

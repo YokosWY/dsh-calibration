@@ -70,8 +70,9 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 
 | 层 | 文件 | 职责 |
 |---|---|---|
-| 客户端 | `lib/client.js` | 四格框 + 模式切换，注册进 `conversation.input.right`（`order=10`） |
-| 宿主 | `lib/index.js` | 合并式落盘、回环桥、`clarify_tier` 与 `forge_level` 两个只读工具 |
+| 客户端 | `lib/client.js` | 四格框 + 模式切换，注册进 `conversation.input.right`（`order=10`）。**单文件 bundle**，模块加载器只吃一个 factory，不能拆 import |
+| 宿主入口 | `lib/index.js` | 装配层：起桥 + 注册工具 + 把 dispose 挂到 `ctx.effect` |
+| 宿主模块 | `lib/core.js` / `lib/state.js` / `lib/bridge.js` / `lib/tools.js` | 常量与文案表 / 状态读写与迁移 / 回环桥 HTTP+SSE / 两个只读工具与轮内快照 |
 | 形态 | `cordis.patch.yml` + `package.json` 的 `dsh.client` | 进 cordis 树，客户端产物编进启动包 |
 
 - 桥：`http://127.0.0.1:43871/state`（GET/POST）与 `/events`（SSE）；只绑回环，宿主在 `43871–43880` 里取第一个能绑的端口，客户端按同区间探测 `/state` 的 `plugin` 标记自动对齐，两套 DSH 同时开着也不打架
@@ -92,12 +93,12 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 ## 测试
 
 ```bash
-npm test        # node --test，45 项，约 4 秒
-npm run lint    # node --check 三个入口文件，查语法
+npm test        # node --test，46 项，约 4 秒
+npm run lint    # scripts/check.mjs：lib 下所有模块 + 所有测试逐个 node --check
 npm run verify  # lint + test，本地 CI 就用这条
 ```
 
-覆盖：状态默认值、模式/档位合并写、非法值 400、标量与坏 JSON 400、两种老 schema 迁移 + `.bak`、坏 JSON 与未知 schema 不覆写（含「未来 schema 带 tier/forge」也不降级）、字段坏只保留能认的一半、两个工具投影、跨站 Origin 403（读/写/预检/null/子域伪装）、本机 Origin 回显 204、`text/plain` 415、写盘失败 500、SSE 首帧与写入广播（两个订阅者收同一帧）、跨站 SSE 403、四格结构、两套标签、循环格亮起、只提交变化维度、focus 重新对齐、SSE 推送落本地与坏帧容错、`/state` 文案优先、兜底文案与宿主表逐字一致、琥珀样式与隔离线、端口被占时退让到下一个并带 `plugin` 标记；另有**交互与容错** 7 项（桥不可达时只探一遍端口且 TTL 内不重扫、POST 带回 pending 时不再补 GET、老宿主缺 pending 时补一次 GET、SSE 彻底断开后重建且不超上限、诊断默认关、离线与待生效同显、POST 响应带 `turnLocked`）；再加 7 项**一致性守则**（版本号与 CHANGELOG 同条、`files` 清单里的文件都在、当前文案不再出现旧名「极限」、工具描述与宿主档位表同字、skill 状态表同字、README 已知边界不再回头写「全局/写死端口」、README 写的测试条数等于实际条数）。
+覆盖：状态默认值、模式/档位合并写、非法值 400、标量与坏 JSON 400、两种老 schema 迁移 + `.bak`、坏 JSON 与未知 schema 不覆写（含「未来 schema 带 tier/forge」也不降级）、字段坏只保留能认的一半、两个工具投影、跨站 Origin 403（读/写/预检/null/子域伪装）、本机 Origin 回显 204、`text/plain` 415、写盘失败 500、SSE 首帧与写入广播（两个订阅者收同一帧）、跨站 SSE 403、四格结构、两套标签、循环格亮起、只提交变化维度、focus 重新对齐、SSE 推送落本地与坏帧容错、`/state` 文案优先、兜底文案与宿主表逐字一致、琥珀样式与隔离线、端口被占时退让到下一个并带 `plugin` 标记；另有**交互与容错** 7 项（桥不可达时只探一遍端口且 TTL 内不重扫、POST 带回 pending 时不再补 GET、老宿主缺 pending 时补一次 GET、SSE 彻底断开后重建且不超上限、诊断默认关、离线与待生效同显、POST 响应带 `turnLocked`）；再加 8 项**一致性守则**（版本号与 CHANGELOG 同条、`files` 清单里的文件都在、`lib` 下每个模块都被 `files` 覆盖、当前文案不再出现旧名「极限」、工具描述与宿主档位表同字、skill 状态表同字、README 已知边界不再回头写「全局/写死端口」、README 写的测试条数等于实际条数）。
 
 CI：`.github/workflows/ci.yml`，推上去后在 Node 22 / 24 上跑 `npm run lint` + `npm test`。本地没有网络通道时以 `npm run verify` 为准。
 

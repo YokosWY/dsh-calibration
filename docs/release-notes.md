@@ -3,6 +3,21 @@
 > GitHub Release 直接取用。更早版本（0.1.0–1.1.1）的逐条记录见 `CHANGELOG.md`。
 > 写法约定：只写机制、范围、限制、数字；不写形容词与口号。
 
+## v1.4.0 — 宿主拆模块，对外不变
+
+**本次改动**
+
+- 宿主从单文件 693 行拆成五个模块：`index.js`（装配：起桥 + 注册工具 + dispose）、`core.js`（常量、档位文案表、会话键清洗、广播总线）、`state.js`（状态读写与迁移，坏文件只读兜底）、`bridge.js`（HTTP + SSE + 端口退让）、`tools.js`（`clarify_tier` / `forge_level` 与轮内快照）。
+- 对外导出不变：`apply`、`inject`、`TIER_LABELS`、`TIER_TITLES`、`publicState`、`turnIdFromExec`、`sessionFromExec`、`originAllowed` 仍旧从 `lib/index.js` 取。
+- 广播改成总线（`setBroadcaster` / `emit`）：桥与工具不再互相 import。
+- 客户端**仍是单文件**：模块加载器只吃一个 factory，拆成 import 会直接起不来；内部的重复落值逻辑已收成 `applyState()`。
+- `npm run lint` 换成 `scripts/check.mjs`：遍历 `lib` 与 `test` 下所有文件逐个 `node --check`，不再手写文件名。
+- `package.json` 的 `files` 改成目录（`lib/`、`scripts`），并加了一道守则：`lib` 下每个模块都必须被 `files` 覆盖，漏加会测试失败。
+
+**验证**：`npm run verify` 通过，46 项测试（新增 1 项 files 覆盖守则），语法检查 10 个文件。
+
+**升级**：完全退出 DSH 再打开。这次不发新行为，回滚装回 1.3.0 的 `lib/` 即可。
+
 ## v1.3.0 — 少一次请求，断线能自己回来
 
 **本次改动**

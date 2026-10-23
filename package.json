@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-clarify-tier",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "private": true,
   "type": "module",
   "main": "./lib/index.js",
@@ -13,19 +13,19 @@
   "license": "MIT",
   "scripts": {
     "test": "node --test \"test/*.test.mjs\"",
-    "lint": "node --check lib/index.js && node --check lib/client.js && node --check test/consistency.test.mjs",
+    "lint": "node scripts/check.mjs",
     "verify": "npm run lint && npm test"
   },
   "engines": {
     "node": ">=22"
   },
   "files": [
-    "lib/index.js",
-    "lib/client.js",
+    "lib/",
     "cordis.patch.yml",
     "README.md",
     "CHANGELOG.md",
     "docs",
+    "scripts",
     "install-profile.ps1",
     "skill"
   ],
