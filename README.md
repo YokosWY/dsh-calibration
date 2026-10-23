@@ -5,7 +5,7 @@
 [![platform](https://img.shields.io/badge/DSH-web%20client-7c6cf0)](#安装)
 [![node](https://img.shields.io/badge/node-%E2%89%A522-7c6cf0)](package.json)
 
-> 给 DeepSeek Harness 的输入框加一条 **需求锚定档位** 分段条：`off / low / high / max / ultra`。
+> 给 DeepSeek Harness 的输入框加一条 **需求锚定档位** 分段条：`off / low / high / max`。
 > 用户选档，模型通过 `clarify_tier` 工具读到，据此决定"开工前问多深"。
 
 ![demo](docs/demo.svg)
@@ -22,15 +22,14 @@
 模型接任务时的"问多深"通常靠临场判断：琐事被追问三轮，重活却只确认一句。
 这个控件把档位从隐形变成显式——拨到哪档，这一轮就按哪档的流程走。
 
-## 五档
+## 四档
 
-| 档 | 名词 | 锁定的东西 | 悬停提示 |
+| 档 | 名词 | 锁定的东西 | 悬停 |
 |---|---|---|---|
-| **off** | 静默 | 不介入 | 关闭 |
-| **low** | 方向 | 做什么、动哪里 | 轻量 |
-| **high**（默认） | 约束 | 目标与禁区 | 常规 |
-| **max** | 落地 | 步骤、回滚、验收 | 严格 |
-| **ultra** | 拷问 | 假设 | 极限 |
+| **off** | 关闭 | 不介入 | 关闭 |
+| **low**（默认） | 常规 | 目标与禁区 | 常规 |
+| **high** | 严格 | 步骤、回滚、验收 | 严格 |
+| **max** | 极限 | 假设 | 极限 |
 
 配套技能 `clarify-needs`（需求锚定流程）在 [token-governance](https://github.com/YokosWY/token-governance) 仓库。
 
