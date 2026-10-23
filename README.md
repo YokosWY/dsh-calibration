@@ -90,10 +90,14 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 ## 测试
 
 ```bash
-npm test     # node --test，31 项，约 3.4 秒
+npm test        # node --test，38 项，约 3.6 秒
+npm run lint    # node --check 三个入口文件，查语法
+npm run verify  # lint + test，本地 CI 就用这条
 ```
 
-覆盖：状态默认值、模式/档位合并写、非法值 400、标量与坏 JSON 400、两种老 schema 迁移 + `.bak`、坏 JSON 与未知 schema 不覆写（含「未来 schema 带 tier/forge」也不降级）、字段坏只保留能认的一半、两个工具投影、跨站 Origin 403（读/写/预检/null/子域伪装）、本机 Origin 回显 204、`text/plain` 415、写盘失败 500、SSE 首帧与写入广播（两个订阅者收同一帧）、跨站 SSE 403、四格结构、两套标签、循环格亮起、只提交变化维度、focus 重新对齐、SSE 推送落本地与坏帧容错、`/state` 文案优先、兜底文案与宿主表逐字一致、琥珀样式与隔离线、端口被占时退让到下一个并带 `plugin` 标记。
+覆盖：状态默认值、模式/档位合并写、非法值 400、标量与坏 JSON 400、两种老 schema 迁移 + `.bak`、坏 JSON 与未知 schema 不覆写（含「未来 schema 带 tier/forge」也不降级）、字段坏只保留能认的一半、两个工具投影、跨站 Origin 403（读/写/预检/null/子域伪装）、本机 Origin 回显 204、`text/plain` 415、写盘失败 500、SSE 首帧与写入广播（两个订阅者收同一帧）、跨站 SSE 403、四格结构、两套标签、循环格亮起、只提交变化维度、focus 重新对齐、SSE 推送落本地与坏帧容错、`/state` 文案优先、兜底文案与宿主表逐字一致、琥珀样式与隔离线、端口被占时退让到下一个并带 `plugin` 标记；另有 7 项**一致性守则**（版本号与 CHANGELOG 同条、`files` 清单里的文件都在、当前文案不再出现旧名「极限」、工具描述与宿主档位表同字、skill 状态表同字、README 已知边界不再回头写「全局/写死端口」、README 写的测试条数等于实际条数）。
+
+CI：`.github/workflows/ci.yml`，推上去后在 Node 22 / 24 上跑 `npm run lint` + `npm test`。本地没有网络通道时以 `npm run verify` 为准。
 
 ## 配套技能
 
@@ -116,7 +120,7 @@ cmd /c mklink /J "D:\AI\DSH-NEXT\skills\clarify-needs" "%CD%\skill\clarify-needs
 
 ## 已知边界
 
-- **10 个端口全被占**（例如三套 DSH 同开）时，控件退化为只读（虚线边框 + `!`）：本地点击仍然换档，但**不会同步到宿主**，重启后按宿主里的值走
+- **端口区间全被占**（`43871–43880` 十个都绑不上，例如三套 DSH 同开）时，控件退化为只读（虚线边框 + `!`）：本地点击仍然换档，但**不会同步到宿主**，重启后按宿主里的值走
 - `DSH_CLARIFY_TIER_PORT` 只改宿主**起点**，客户端按同区间探测、认 `plugin` 标记，两端不用手工对齐；要改区间宽度得同时改宿主与客户端的 `PORT_SPAN`
 - 状态文件只有一个（`storages/clarify-tier.json`）：并发写按「最后落盘为准」，没有跨进程锁
 - 工具返回的是调用时刻的值；中途改档要再调一次

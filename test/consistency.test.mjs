@@ -1,0 +1,67 @@
+// 一致性守则：版本、名字、文档、发布面。
+// 起因（1.2.1）：代码改了名，工具描述和 README 还停在旧说法——这类漂移靠人盯不住，交给测试。
+// 运行：npm test
+import test from "node:test";
+import assert from "node:assert";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const root = join(here, "..");
+const read = (...p) => readFileSync(join(root, ...p), "utf8");
+const pkg = JSON.parse(read("package.json"));
+
+test("版本号与 CHANGELOG 首条一致", () => {
+  const first = read("CHANGELOG.md").match(/^## (\d+\.\d+\.\d+)/m);
+  assert.ok(first, "CHANGELOG 里找不到版本标题");
+  assert.equal(pkg.version, first[1], "package.json 版本与 CHANGELOG 首条不一致");
+});
+
+test("发布面文件都在（package.json files 清单）", () => {
+  for (const f of pkg.files) {
+    assert.ok(existsSync(join(root, f)), `files 清单里的 ${f} 不存在`);
+  }
+});
+
+test("当前文案统一叫「极致」，历史记录除外", () => {
+  for (const f of ["lib/index.js", "lib/client.js", "docs/demo.svg"]) {
+    assert.ok(!read(f).includes("极限"), `${f} 里还有旧名「极限」`);
+  }
+  assert.ok(pkg.description.includes("极致"), "package.json 描述没提到「极致」");
+  assert.ok(!pkg.description.includes("极限"), "package.json 描述里还有旧名「极限」");
+});
+
+test("clarify_tier 的工具描述与宿主档位表同字", () => {
+  const m = read("lib/index.js").match(/name: "clarify_tier",\s*description:\s*\n?\s*"([^"]+)"/);
+  assert.ok(m, "找不到 clarify_tier 的描述");
+  assert.ok(m[1].includes("关闭/严格/极致"), `工具描述没跟档位表对齐：${m[1]}`);
+});
+
+test("skill 的当前状态表用「极致」", () => {
+  const rows = read("skill", "clarify-needs", "README.md").split(/\r?\n/);
+  const row = rows.find((l) => l.startsWith("| **max**"));
+  assert.ok(row, "skill README 里找不到 max 档那一行");
+  assert.ok(row.includes("极致"), `max 档那一行还是旧名：${row}`);
+});
+
+test("README 已知边界不再回头说全局与写死端口", () => {
+  const parts = read("README.md").split("## 已知边界");
+  assert.equal(parts.length, 2, "README 里找不到「已知边界」小节");
+  const section = parts[1].split(/\n## /)[0];
+  assert.ok(!section.includes("全局"), "已知边界又写成全局档位了（实际按会话存）");
+  assert.ok(!section.includes("写死"), "已知边界又写成客户端端口写死了（1.2.0 起自动发现）");
+  assert.ok(section.includes("43871"), "已知边界应写明端口区间");
+});
+
+test("README 写的测试条数跟实际一致", () => {
+  const claimed = Number((read("README.md").match(/npm test\s+#.*?(\d+) 项/) || [])[1]);
+  assert.ok(Number.isFinite(claimed), "README 测试段没写「N 项」");
+  const files = readdirSync(join(root, "test")).filter((f) => f.endsWith(".test.mjs"));
+  let actual = 0;
+  for (const f of files) {
+    const body = read("test", f).replace(/^\s*\/\/.*$/gm, "");
+    actual += (body.match(/\btest\(/g) || []).length;
+  }
+  assert.equal(claimed, actual, `README 写 ${claimed} 项，实际 ${actual} 项`);
+});

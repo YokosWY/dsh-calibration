@@ -12,7 +12,9 @@
   "description": "一框双模式档位条：思考（关闭/严格/极致）与循环（轻量/交付/极致）共用一根框，右侧隔离的「循环」切模式，配 clarify_tier 与 forge_level 两个工具。",
   "license": "MIT",
   "scripts": {
-    "test": "node --test test/host.test.mjs test/client.test.mjs"
+    "test": "node --test \"test/*.test.mjs\"",
+    "lint": "node --check lib/index.js && node --check lib/client.js && node --check test/consistency.test.mjs",
+    "verify": "npm run lint && npm test"
   },
   "engines": {
     "node": ">=22"

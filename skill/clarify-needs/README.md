@@ -74,7 +74,7 @@ Windows 也可以直接建 junction（改完源目录即时生效）：
 cmd /c mklink /J "%USERPROFILE%\.dsh\skills\clarify-needs" "D:\path\to\dsh-clarify-tier\skill\clarify-needs"
 ```
 
-配了 GUI 滑条（插件 [`dsh-clarify-tier`](https://github.com/YokosWY/dsh-clarify-tier)）时，输入框工具行、模型选择左边会有 `off/low/high/max` 分段条（关闭 / 常规 / 严格 / 极限），模型通过 `clarify_tier` 工具读档位。
+配了 GUI 滑条（插件 [`dsh-clarify-tier`](https://github.com/YokosWY/dsh-clarify-tier)）时，输入框工具行、模型选择左边会有分段条（关闭 / 严格 / 极致，值域 `off/high/max`），模型通过 `clarify_tier` 工具读档位。
 
 装好后模型目录会出现 `clarify-needs`。它是**常驻**技能（每个请求都在上下文里），
 不需要手动触发；要直接切档就说「走 high」「上 max」，说「别问了 / 不用澄清」= off（技能退出）。
