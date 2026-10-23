@@ -172,11 +172,12 @@ test("兜底文案与宿主表逐字一致", () => {
   assert.deepEqual(FALLBACK_TITLES, TIER_TITLES);
 });
 
-test("样式：循环模式琥珀、隔离线存在", () => {
+test("样式：循环模式琥珀、隔离线、待生效小点存在", () => {
   const { CSS } = boot().mod.__internals;
   assert.match(CSS, /data-mode='loop'\] \.dct-cell\[data-on='1'\]\{background:#e08a2e\}/);
   assert.match(CSS, /\.dct-sep\{/);
   assert.match(CSS, /\.dct-mode\[data-on='1'\]/);
+  assert.match(CSS, /data-pending='1'/);
 });
 
 test("会话隔离：不同对话各存各的键，桥地址带 session", () => {

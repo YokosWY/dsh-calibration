@@ -1,4 +1,4 @@
-// 宿主半边（v0.8 会话隔离 + 开始即锁）：隔离、锁定、409、解锁、迁移、安全、坏文件不覆写。
+// 宿主半边（v0.9 每轮快照）：会话隔离、轮内冻结、轮间生效、迁移、安全、坏文件不覆写。
 // 运行：npm test
 import test from "node:test";
 import assert from "node:assert";
@@ -50,8 +50,8 @@ const setSession = async (session, mode, level) => {
   const res = await post(session, { mode, level });
   assert.equal(res.status, 200);
 };
-const exec = (session) => ({ agent: { session: { id: session } } });
-const callTool = async (name, session) => tools.get(name).execute(undefined, exec(session));
+const exec = (session, turn) => ({ agent: { session: { id: session, turn: turn ? { id: turn } : undefined } } });
+const callTool = async (name, session, turn) => tools.get(name).execute(undefined, exec(session, turn));
 
 test("空会话用内置默认：think/high，GET 不建文件", async () => {
   rmSync(statePath, { force: true });
@@ -59,7 +59,7 @@ test("空会话用内置默认：think/high，GET 不建文件", async () => {
   assert.equal(s.mode, "think");
   assert.equal(s.level, "high");
   assert.equal(s.inherited, true);
-  assert.equal(s.locked, false);
+  assert.equal(s.pending, false);
   assert.equal(s.schema, 6);
   assert.equal(existsSync(statePath), false);
 });
@@ -83,55 +83,42 @@ test("同一会话内切模式不丢档位", async () => {
   assert.equal(s.level, "max");
 });
 
-test("第一次工具调用即冻结：GET 后未锁，工具后锁定", async () => {
-  await setSession("s-lock", "loop", "high");
-  let s = await (await get("s-lock")).json();
-  assert.equal(s.locked, false, "还没开工，不该锁");
-  const f = await callTool("forge_level", "s-lock");
-  assert.equal(f.forge, "high");
-  s = await (await get("s-lock")).json();
-  assert.equal(s.locked, true);
-  assert.ok(s.lockedAt);
+test("轮内冻结：同一轮里点了档，工具仍读开工时那份", async () => {
+  await setSession("s-turn", "think", "high");
+  const first = await callTool("forge_level", "s-turn", "turn-1");
+  assert.equal(first.turnLocked, true);
+  assert.equal(first.forge, "off"); // 思考模式
+  // 用户在「我思考时」点成循环·极限
+  await setSession("s-turn", "loop", "max");
+  const again = await callTool("forge_level", "s-turn", "turn-1");
+  assert.equal(again.mode, "think", "同一轮不该换档");
+  assert.equal(again.pending, true, "应标记为下轮生效");
+  const s = await (await get("s-turn")).json();
+  assert.equal(s.mode, "loop", "存储值已经改了");
+  assert.equal(s.pending, true);
 });
 
-test("锁定后误点被拒：409 且档位不变", async () => {
-  const before = await (await get("s-lock")).json();
-  const res = await post("s-lock", { mode: "think", level: "off" });
-  assert.equal(res.status, 409);
-  const body = await res.json();
-  assert.equal(body.error, "locked");
-  const after = await (await get("s-lock")).json();
-  assert.equal(after.mode, before.mode);
-  assert.equal(after.level, before.level);
-  const t = await callTool("clarify_tier", "s-lock");
-  assert.equal(t.tier, "off", "循环模式下思考档返回 off");
+test("轮间生效：下一轮用新档", async () => {
+  const next = await callTool("forge_level", "s-turn", "turn-2");
+  assert.equal(next.mode, "loop");
+  assert.equal(next.forge, "max");
+  assert.equal(next.pending, false);
 });
 
-test("锁定只作用于本对话：别的会话照常可写", async () => {
-  await setSession("s-other", "think", "high");
-  const res = await post("s-other", { level: "max" });
-  assert.equal(res.status, 200);
+test("拿不到轮 id 时退回实时值，不报错", async () => {
+  await setSession("s-noid", "think", "max");
+  const r = await callTool("clarify_tier", "s-noid", null);
+  assert.equal(r.tier, "max");
+  assert.equal(r.turnLocked, false);
 });
 
-test("unlock_tier 解除锁定后可再改", async () => {
-  const u = await callTool("unlock_tier", "s-lock");
-  assert.equal(u.ok, true);
-  const res = await post("s-lock", { mode: "think", level: "high" });
-  assert.equal(res.status, 200);
-  const s = await (await get("s-lock")).json();
-  assert.equal(s.locked, false);
-  assert.equal(s.mode, "think");
-});
-
-test("工具按 exec 会话读；拿不到落 default 且 default 不锁", async () => {
-  const a = await callTool("forge_level", "s-iso-a");
-  const b = await callTool("forge_level", "s-iso-b");
+test("工具按 exec 会话读；拿不到会话落 default", async () => {
+  const a = await callTool("forge_level", "s-iso-a", "t1");
+  const b = await callTool("forge_level", "s-iso-b", "t1");
   assert.equal(a.forge, "max");
   assert.equal(b.forge, "off");
   const d = await tools.get("forge_level").execute();
   assert.equal(d.session, "default");
-  const res = await post(null, { mode: "think", level: "high" });
-  assert.equal(res.status, 200, "default 不该被锁");
 });
 
 test("非法值 400 且不落盘", async () => {
@@ -259,7 +246,7 @@ function openStream(session, headers = {}) {
   });
 }
 
-test("SSE 只推同一会话，且帧里带 locked", async () => {
+test("SSE 只推同一会话，帧里带 pending/turnLocked", async () => {
   await setSession("s-sse-a", "think", "high");
   await setSession("s-sse-b", "think", "high");
   const a = await openStream("s-sse-a");
@@ -269,7 +256,7 @@ test("SSE 只推同一会话，且帧里带 locked", async () => {
     await post("s-sse-a", { mode: "loop", level: "max" });
     await waitFor(() => a.frames.length >= 2);
     assert.equal(a.frames.at(-1).mode, "loop");
-    assert.equal(typeof a.frames.at(-1).locked, "boolean");
+    assert.equal(typeof a.frames.at(-1).pending, "boolean");
     assert.equal(b.frames.length, 1, "b 不该收到 a 的广播");
   } finally {
     a.req.destroy();
