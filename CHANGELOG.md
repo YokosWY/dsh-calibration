@@ -1,5 +1,11 @@
 # 变更记录
 
+## 0.9.3 — 2026-10-24
+- 客户端确认注册成功（`inject-fired` + `registered` → `conversation.input.right`）
+- `debug_probe` 返回改成 JSON 安全（修 lossless JSON 报错），同时把探测结果写进宿主日志
+- 轮 id 多候选：`exec.turnId` / `session.turn.id` / `agent.turn.id` / `loopCtx.turnId` / `loopCtx.turn.id` / `runtimeContext.turnId`
+- 客户端诊断补 `ctx.sessions` 的键（判断能否由客户端标记轮起止）
+
 ## 0.9.2 — 2026-10-24
 - **根因找到**：Web 客户端 Origin 是 `dsh-app://app`，被 Origin 白名单拒掉 → 所有 `/state`、`/events` 请求 CORS 失败，控件读到空数据
 - Origin 白名单放行 `dsh-app:` 协议；其余规则不变（http/https 仍限本机）
