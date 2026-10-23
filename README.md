@@ -5,8 +5,10 @@
 [![platform](https://img.shields.io/badge/DSH-web%20client-7c6cf0)](#安装)
 [![node](https://img.shields.io/badge/node-%E2%89%A522-7c6cf0)](package.json)
 
-> 给 DeepSeek Harness 的输入框加一条 **需求锚定档位** 分段条：`off / low / high / max`。
-> 用户选档，模型通过 `clarify_tier` 工具读到，据此决定"开工前问多深"。
+> 给 DeepSeek Harness 的输入框加两条分段条：
+> 1. **需求锚定档位** `off / low / high / max`
+> 2. **循环锻造开关** `off / 标准 / 极限`（0.4.0 起）
+> 用户拨档，模型通过 `clarify_tier` / `forge_level` 读到，据此决定「开工前问多深」与「交付后磨几轮」。
 
 ![demo](docs/demo.svg)
 
@@ -33,6 +35,23 @@
 
 配套技能 `clarify-needs`（需求锚定流程）在 [token-governance](https://github.com/YokosWY/token-governance) 仓库。
 
+## 循环锻造开关（0.4.0）
+
+锚定条右侧多一格琥珀色分段条，管交付**之后**要不要继续磨：
+
+| 档 | 名词 | 轮次上限 | 评审 |
+|---|---|---|---|
+| **off**（默认） | 关闭 | — | 不自动循环；用户点名「打磨」时按轻档 3 轮、纯自检 |
+| **std** | 标准 | 5 | 第 2 轮独立评审 + 收敛轮复核 |
+| **max** | 极限 | 8 | 每轮独立评审 |
+
+两条开关**正交叠加**：锚定管开工前，锻造管交付后，互不改写。配套技能 `loop-forge` 装在
+`D:\AI\Skills\mine\loop-forge`（判据先行 → 每轮在对话里报数 → 自动下一轮 → 自动止损）。
+
+```powershell
+cmd /c mklink /J "D:\AI\DSH-NEXT\skills\loop-forge" "D:\AI\Skills\mine\loop-forge"
+```
+
 ## 安装
 
 需要：DSH Desktop / DSH NEXT（带 Web 客户端插件支持的版本）。
@@ -49,19 +68,19 @@ pwsh -File install-profile.ps1 -DshHome "C:\Users\<you>\.dsh"
 脚本做三件事：往 profile 的 `package.json` 加一条 `link:` 依赖、把包名追加进 `dsh.profile.bundles`、
 在 profile 的 `node_modules` 下建链接。装完**完全退出并重开** DSH（关窗口不够，要退出进程）。
 
-验证：输入框工具行、模型选择左边出现五格分段条；点一档后问模型「档位多少」，它应能调 `clarify_tier` 报出同值。
+验证：输入框工具行、模型选择左边出现**两条**分段条（紫色=需求锚定，琥珀色=循环锻造）；点一档后问模型「档位多少」「锻造档多少」，它应能调 `clarify_tier` / `forge_level` 报出同值。
 
 ## 工作原理
 
 | 层 | 文件 | 职责 |
 |---|---|---|
-| 客户端 | `lib/client.js` | 分段条 UI，注册进 `conversation.input.right` 插槽（`order=10`，落在模型席左边） |
-| 宿主 | `lib/index.js` | 落盘状态、开本地桥、注册 `clarify_tier` 工具 |
+| 客户端 | `lib/client.js` | 两条分段条 UI，注册进 `conversation.input.right` 插槽（`order=10` / `11`，落在模型席左边） |
+| 宿主 | `lib/index.js` | 合并式落盘状态、开本地桥、注册 `clarify_tier` 与 `forge_level` 工具 |
 | 形态 | `cordis.patch.yml` + `package.json` 的 `dsh.client` | 进 cordis 树，客户端产物才会被编进启动包 |
 
 - 桥：`http://127.0.0.1:43871/state`（GET/POST，只绑回环，CORS `*`，端口可用 `DSH_CLARIFY_TIER_PORT` 改）
-- 状态：`$DSH_HOME/storages/clarify-tier.json`
-- 模型可见通道：工具 `clarify_tier`（读当前值；不写）
+- 状态：`$DSH_HOME/storages/clarify-tier.json`，内容是 `{ tier, forge, schema: 4 }`；写入为**合并式**，只改传进来的字段
+- 模型可见通道：`clarify_tier`（锚定档）、`forge_level`（锻造档 + 轮次上限 + 评审方式），都只读
 
 三条纪律：**fail-open**（注册失败只是控件不出现）、**不碰官方 DOM**、**不注入会话消息**。
 
@@ -83,7 +102,8 @@ cmd /c mklink /J "%USERPROFILE%\.dsh\skills\clarify-needs" "%CD%\skill\clarify-n
 
 - 档位是**全局**的，不是每会话一份（v0.1 的取舍）
 - 桥接端口被占时，控件退化为只读（虚线边框 + `!`），不刷屏报错
-- `clarify_tier` 返回的是调用时刻的值；中途改档要再调一次
+- `clarify_tier` / `forge_level` 返回的是调用时刻的值；中途改档要再调一次
+- 老宿主只回 `tier` 时，锻造条保持 localStorage 里的值，不显示降级标记（0.4.0 的兼容处理）
 
 ## 踩过的坑（别重犯）
 
