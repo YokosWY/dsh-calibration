@@ -1,5 +1,11 @@
 # 变更记录
 
+## 1.1.0 — 2026-10-24
+- **根因**：`exec.agent` 是带注入校验的 cordis 上下文代理，访问未声明属性会抛 `cannot get property "turnId" without inject`；旧代码把所有候选写成数组字面量一次性求值，整段落到 catch → turnId 恒为 null
+- 改为**逐个候选惰性求值**，各自兜错；候选收敛为 `agent.phase.turn` 与 `exec.turnId` 两个已证实安全的读法
+- 回归测试：用 Proxy 模拟“未知属性即抛错”的 agent，断言仍能取到 `phase.turn`
+- 30 项测试全过
+
 ## 1.0.2 — 2026-10-24
 - `turnIdFromExec` 逐候选追踪（写入 `clarify-tier-turn.jsonl`），定位“phaseTurn=17 但 turnId=null”
 

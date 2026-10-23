@@ -105,6 +105,17 @@ test("轮间生效：下一轮用新档", async () => {
   assert.equal(next.pending, false);
 });
 
+test("agent 是带注入校验的代理时，仍能取到 phase.turn", () => {
+  const target = { phase: { turn: 7 }, session: { id: "s-proxy" }, id: "s-proxy" };
+  const proxy = new Proxy(target, {
+    get(obj, prop) {
+      if (prop in obj) return obj[prop];
+      throw new Error(`cannot get property "${String(prop)}" without inject`);
+    },
+  });
+  assert.equal(mod.turnIdFromExec({ agent: proxy }), "7");
+});
+
 test("拿不到轮 id 时退回实时值，不报错", async () => {
   await setSession("s-noid", "think", "max");
   const r = await callTool("clarify_tier", "s-noid", null);
