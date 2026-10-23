@@ -1,5 +1,10 @@
 # 变更记录
 
+## 1.1.1 — 2026-10-24
+- **线上验收通过**：轮 id = `19`，快照写入 `turn{id,mode,level}`；轮内改档后 `pending:true` 而工具仍读旧值
+- 摘掉临时诊断（`phaseDiag` 与 `clarify-tier-turn.jsonl` 写入），代码回到干净状态
+- 30 项测试全过；`/debug` 通道保留
+
 ## 1.1.0 — 2026-10-24
 - **根因**：`exec.agent` 是带注入校验的 cordis 上下文代理，访问未声明属性会抛 `cannot get property "turnId" without inject`；旧代码把所有候选写成数组字面量一次性求值，整段落到 catch → turnId 恒为 null
 - 改为**逐个候选惰性求值**，各自兜错；候选收敛为 `agent.phase.turn` 与 `exec.turnId` 两个已证实安全的读法
