@@ -9,9 +9,10 @@ import { dirname, join } from "node:path";
 import { TIER_LABELS, TIER_TITLES } from "../lib/index.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
+const tick = (ms = 20) => new Promise((r) => setTimeout(r, ms));
 const CODE = readFileSync(join(here, "..", "lib", "client.js"), "utf8");
 
-function boot(remote = { mode: "think", level: "high" }) {
+function boot(remote = { mode: "think", level: "high", plugin: "dsh-clarify-tier" }) {
   const registerCalls = [];
   const posts = [];
   const listeners = [];
@@ -111,23 +112,25 @@ test("只注册一条插槽，order=10，槽位正确", () => {
   assert.equal(env.registerCalls[0].cfg.name, "conversation.input.right");
 });
 
-test("思考模式：3 档 + 1 隔离线 + 1 循环，标签二字", () => {
+test("思考模式：3 档 + 1 隔离线 + 1 循环，标签二字", async () => {
   const tree = boot().render();
+  await tick();
   assert.equal(tree.props["data-mode"], "think");
   assert.equal(tree.children.length, 5);
   assert.equal(tree.children[3].props.className, "dct-sep");
   const labels = tree.children.slice(0, 3).map((c) => c.children[0]);
-  assert.deepEqual(labels, ["关闭", "严格", "极限"]);
+  assert.deepEqual(labels, ["关闭", "严格", "极致"]);
   assert.equal(tree.children[4].children[0], "循环");
 });
 
-test("循环模式：标签换成循环档，循环格亮起", () => {
+test("循环模式：标签换成循环档，循环格亮起", async () => {
   const env = boot();
   env.store.set("dsh-tier-mode:s-alpha", JSON.stringify({ mode: "loop", level: "max" }));
   const tree = env.render();
+  await tick();
   assert.equal(tree.props["data-mode"], "loop");
   const labels = tree.children.slice(0, 3).map((c) => c.children[0]);
-  assert.deepEqual(labels, ["轻量", "交付", "极限"]);
+  assert.deepEqual(labels, ["轻量", "交付", "极致"]);
   assert.equal(tree.children[4].props["data-on"], "1");
   assert.equal(tree.children[4].props["data-mode-toggle"], "loop");
 });
@@ -138,9 +141,10 @@ test("挂载时注册 focus 刷新（双窗对齐）", () => {
   assert.ok(env.listeners.includes("focus"));
 });
 
-test("用 SSE 接收其他窗口的改动并落本地", () => {
+test("用 SSE 接收其他窗口的改动并落本地", async () => {
   const env = boot();
   env.render();
+  await tick(40);
   assert.equal(env.streams.length, 1, "应建立一条 SSE 连接");
   assert.match(env.streams[0].url, /\/events\?session=s-alpha$/);
   env.streams[0].onmessage({ data: JSON.stringify({ mode: "loop", level: "max" }) });
@@ -148,12 +152,15 @@ test("用 SSE 接收其他窗口的改动并落本地", () => {
   env.streams[0].onmessage({ data: "{bad" }); // 坏帧不许抛
 });
 
-test("点档位只提交 level，点循环只提交 mode", () => {
+test("点档位只提交 level，点循环只提交 mode", async () => {
   const env = boot();
   const tree = env.render();
+  await tick();
   tree.children[0].props.onClick(); // 关闭
+  await tick();
   assert.deepEqual(env.posts.at(-1), { level: "off" });
   env.render().children[4].props.onClick(); // 循环
+  await tick();
   assert.deepEqual(env.posts.at(-1), { mode: "loop" });
 });
 
@@ -180,10 +187,11 @@ test("样式：循环模式琥珀、隔离线、待生效小点存在", () => {
   assert.match(CSS, /data-pending='1'/);
 });
 
-test("会话隔离：不同对话各存各的键，桥地址带 session", () => {
+test("会话隔离：不同对话各存各的键，桥地址带 session", async () => {
   const env = boot();
   const a = env.render("s-alpha");
   env.render("s-beta").children[0].props.onClick();
+  await tick();
   assert.deepEqual(env.posts.at(-1), { level: "off" });
   env.store.set("dsh-tier-mode:s-beta", JSON.stringify({ mode: "loop", level: "max" }));
   const b = env.render("s-beta");

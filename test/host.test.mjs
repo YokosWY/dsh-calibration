@@ -11,6 +11,11 @@ const home = mkdtempSync(join(tmpdir(), "dsh-tier-test-"));
 process.env.DSH_HOME = home;
 process.env.DSH_CLARIFY_TIER_PORT = "43991";
 
+// 先占住 43991，验证宿主会自动退到 43992
+const blocker = http.createServer((req, res) => res.end("blocked"));
+await new Promise((resolve) => blocker.listen(43991, "127.0.0.1", resolve));
+blocker.unref();
+
 const mod = await import("../lib/index.js");
 
 const tools = new Map();
@@ -20,7 +25,7 @@ mod.apply({
   effect: () => {},
 });
 
-const BASE = "http://127.0.0.1:43991/state";
+const BASE = "http://127.0.0.1:43992/state";
 const statePath = join(home, "storages", "clarify-tier.json");
 const NL = String.fromCharCode(10);
 
@@ -52,6 +57,11 @@ const setSession = async (session, mode, level) => {
 };
 const exec = (session, turn) => ({ agent: { id: session, session: { id: session }, phase: turn === undefined ? undefined : { turn } } });
 const callTool = async (name, session, turn) => tools.get(name).execute(undefined, exec(session, turn));
+
+test("端口被占时自动退到下一个，并在 /state 带 plugin 标记", async () => {
+  const s = await (await get()).json();
+  assert.equal(s.plugin, "dsh-clarify-tier");
+});
 
 test("空会话用内置默认：think/high，GET 不建文件", async () => {
   rmSync(statePath, { force: true });
@@ -231,7 +241,7 @@ async function waitFor(fn, timeout = 4000) {
 function openStream(session, headers = {}) {
   const path = `/events?session=${encodeURIComponent(session)}`;
   return new Promise((resolve, reject) => {
-    const req = http.get({ host: "127.0.0.1", port: 43991, path, headers }, (res) => {
+    const req = http.get({ host: "127.0.0.1", port: 43992, path, headers }, (res) => {
       const frames = [];
       let buf = "";
       res.setEncoding("utf8");
