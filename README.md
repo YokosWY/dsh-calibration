@@ -11,15 +11,17 @@
 
 ![demo](docs/demo.svg)
 
-## 一根框两个模式
+## 一根框、两模式、一开关
 
 ```
-思考：  [常规] [严格] [极致] ‖ [循环]        ← 紫
-循环：  [轻量] [交付] [极致] ‖ [循环]亮     ← 琥珀
+思考：  [常规] [严格] [极致] ‖ [循环] [对抗]        ← 紫 / 循环琥珀 / 对抗珊瑚红
+循环：  [轻量] [交付] [极致] ‖ [循环]亮 [对抗]
 ```
 
-右侧「循环」用一条隔离线隔开，它是**模式开关**，不是第四档。
-切到循环模式后，前三个格的含义从「问多深」变成「磨几轮」，标签和配色一起换。
+隔离线右边是**两个开关**，都不是档位：
+
+- **循环**：切模式，前三格从「问多深」变成「磨几轮」，标签与配色一起换；
+- **对抗**：正交开关，不改变前三格，只决定这一轮要不要额外加「万一」审查（思考模式=动手前审方案 + 交付前审改动；循环模式=每轮审改动）。两个开关互不影响，可以同时开。
 
 | 模式 | 格 | 含义 | 模型读到 |
 |---|---|---|---|
@@ -30,6 +32,8 @@
 | 循环 | 交付 | 5 轮，第 2 轮独立评审 + 收敛复核 | `forge_level=high` |
 | 循环 | 极致 | 8 轮，第 2 轮起每轮独立评审 | `forge_level=max` |
 
+对抗开关决定「每轮几条攻击」：常规/严格 3 条、极致 5 条；关着就是 0 条，行为与以前完全一致。
+
 **为什么不叠两轴**：一根框放不下「问多深 × 磨几轮」四象限；循环模式下的轻量对齐交给 loop-forge 第 1 步的「定判据」，比再摆一条滑条更省。
 
 ## 状态模型（每个对话各用各的）
@@ -38,15 +42,21 @@
 {
   "schema": 6,
   "sessions": {
-    "<sessionId>": { "mode": "think" | "loop", "level": "off" | "high" | "max", "updatedAt": "…" }
+    "<sessionId>": {
+      "mode": "think" | "loop",
+      "level": "off" | "high" | "max",
+      "counter": true | false,
+      "updatedAt": "…"
+    }
   }
 }
 ```
 
 - **会话键**：客户端用插槽 inject 给的 `sessionId`，经 `?session=` 传给桥；工具用 `exec.agent.session.id`，读不到才落 `default`
-- `clarify_tier`：思考模式返回 `level`；循环模式返回 `off`（不叠加锚定）
-- `forge_level`：思考模式返回 `off`；循环模式把 `off/high/max` 映射成 `lite/high/max` 与 3/5/8 轮
-- **每轮快照**：一条用户消息 = 一轮（轮号取 `agent.phase.turn`）。开工第一次调工具时，把当时的档位记成本轮快照（`turn{id,mode,level}`）；本轮内再点档位条只改「下轮的值」，条尾显示一个琥珀小点（`pending`）
+- `clarify_tier`：思考模式返回 `level` + `counter`；循环模式返回 `off`（不叠加锚定）+ `counter`
+- `counter` = 对抗开关：`{ enabled, maxAttacks, scope }`，密度随档位（常规/严格 3 条、极致 5 条），`scope` 思考为 `plan+delivery`、循环为 `round-changes`
+- `forge_level`：思考模式返回 `off`；循环模式把 `off/high/max` 映射成 `lite/high/max` 与 3/5/8 轮；同样带 `counter`
+- **每轮快照**：一条用户消息 = 一轮（轮号取 `agent.phase.turn`）。开工第一次调工具时，把当时的设置记成本轮快照（`turn{id,mode,level,counter}`）；本轮内再点档位条只改「下轮的值」，条尾显示一个琥珀小点（`pending`）
 - 下一轮开工自动换用新值；取不到轮 id 时退回实时值（不做轮内保护，但功能不坏）
 - 没单独设置过的对话，继承 `default` 会话（迁移自 0.6 的全局值），再没有就用内置 `think/high`
 - 文件：`$DSH_HOME/storages/clarify-tier.json`；每会话只写自己那条，切模式不会丢档位；最多保留 100 个会话（删最旧的非 `default`）
@@ -76,6 +86,7 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 | 形态 | `cordis.patch.yml` + `package.json` 的 `dsh.client` | 进 cordis 树，客户端产物编进启动包 |
 
 - 桥：`http://127.0.0.1:43871/state`（GET/POST）与 `/events`（SSE）；只绑回环，宿主在 `43871–43880` 里取第一个能绑的端口，客户端按同区间探测 `/state` 的 `plugin` 标记自动对齐，两套 DSH 同时开着也不打架
+- **对抗是独立开关**：开/关记在 `counter` 上，密度随档位（常规/严格 3 条、极致 5 条），关着就是 0 条、行为与旧版一致；两个工具都返回 `counter`，客户端只多一格
 - **两套 DSH 同开时靠「会话归属」认桥**：`/state` 带 `knownSession`，只有**本实例的工具**为该会话落过盘才算认识（客户端写只标 `owner:"client"`，认领不到）——`plugin` 标记只能证明「是同一个插件」，分不出是哪个实例
 - **认不准就不碰桥**：扫一遍端口后若「两套以上、且谁都不认识本会话」，客户端**不读不写任何桥、也不连 SSE**，只用本地值（本地值天生属于本应用），并显示 `!`；期间点击先记账，认准实例后补写一次。工具只在本轮的第一次调用时落盘，所以通常几秒内就会认准
 - **只有一套在跑就直接认**：端口上只找到一个本插件实例时不存在「连错」的可能，不必等工具落盘
@@ -96,7 +107,7 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 ## 测试
 
 ```bash
-npm test        # node --test，58 项，约 4 秒
+npm test        # node --test，59 项，约 4 秒
 npm run lint    # scripts/check.mjs：lib 下所有模块 + 所有测试逐个 node --check
 npm run verify  # lint + test，本地 CI 就用这条
 ```

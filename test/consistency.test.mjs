@@ -6,7 +6,7 @@ import assert from "node:assert";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { LEVELS, COUNTER_PLAN } from "../lib/core.js";
+import { LEVELS, counterPlan, COUNTER_ATTACKS } from "../lib/core.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -68,11 +68,11 @@ test("技能里的档位表与宿主 LEVELS 是同一套", () => {
   }
 });
 
-test("对抗审密度与档位表绑定（轻量关 / 交付 3 / 极致 5）", () => {
-  assert.deepEqual(Object.keys(COUNTER_PLAN).sort(), [...LEVELS].sort(), "COUNTER_PLAN 的键必须与 LEVELS 一致");
-  assert.equal(COUNTER_PLAN.off.enabled, false);
-  assert.equal(COUNTER_PLAN.high.maxAttacks, 3);
-  assert.equal(COUNTER_PLAN.max.maxAttacks, 5);
+test("对抗审：默认关、开之后密度随档位、scope 随模式", () => {
+  assert.deepEqual(Object.keys(COUNTER_ATTACKS).sort(), [...LEVELS].sort(), "COUNTER_ATTACKS 的键必须与 LEVELS 一致");
+  assert.deepEqual(counterPlan("think", "high", false), { enabled: false, maxAttacks: 0, scope: "plan+delivery" });
+  assert.deepEqual(counterPlan("think", "high", true), { enabled: true, maxAttacks: 3, scope: "plan+delivery" });
+  assert.deepEqual(counterPlan("loop", "max", true), { enabled: true, maxAttacks: 5, scope: "round-changes" });
 });
 
 test("counter-review 技能在位，description 合规", () => {

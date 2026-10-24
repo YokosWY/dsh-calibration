@@ -135,7 +135,7 @@ test("思考模式：3 档 + 1 隔离线 + 1 循环，标签二字", async () =>
   const tree = boot().render();
   await tick();
   assert.equal(tree.props["data-mode"], "think");
-  assert.equal(tree.children.length, 5);
+  assert.equal(tree.children.length, 6, "3 档 + 隔离线 + 循环 + 对抗");
   assert.equal(tree.children[3].props.className, "dct-sep");
   const labels = tree.children.slice(0, 3).map((c) => c.children[0]);
   assert.deepEqual(labels, ["常规", "严格", "极致"]);
@@ -167,7 +167,7 @@ test("用 SSE 接收其他窗口的改动并落本地", async () => {
   assert.equal(env.streams.length, 1, "应建立一条 SSE 连接");
   assert.match(env.streams[0].url, /\/events\?session=s-alpha$/);
   env.streams[0].onmessage({ data: JSON.stringify({ mode: "loop", level: "max" }) });
-  assert.deepEqual(JSON.parse(env.store.get("dsh-tier-mode:s-alpha")), { mode: "loop", level: "max" });
+  assert.deepEqual(JSON.parse(env.store.get("dsh-tier-mode:s-alpha")), { mode: "loop", level: "max", counter: false });
   env.streams[0].onmessage({ data: "{bad" }); // 坏帧不许抛
 });
 
@@ -305,6 +305,17 @@ test("离线与待生效同时成立时，title 两件事都说", () => {
   assert.equal(barTitle(false, false, false), "思考模式");
 });
 
+test("对抗是独立开关：点一下只提交 counter，不动模式与档位", async () => {
+  const env = boot();
+  const tree = env.render();
+  await tick(40);
+  const btn = tree.children[5];
+  assert.equal(btn.props["data-counter-toggle"], "off", "默认关");
+  btn.props.onClick();
+  await tick(40);
+  assert.deepEqual(env.posts.at(-1), { counter: true }, "只提交 counter 一维");
+});
+
 test("两套 DSH 同开：当前桥不认识本会话时，切到认识它的那个端口", async () => {
   const env = boot(
     { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false },
@@ -387,7 +398,7 @@ test("两套都不认领：不连 SSE、点击只存本地，认领后补写一�
   tree.children[0].props.onClick();
   await tick(30);
   assert.equal(env.posts.length, 0, "未认领时不该写任何实例");
-  assert.deepEqual(JSON.parse(env.store.get("dsh-tier-mode:s-alpha")), { mode: "think", level: "off" }, "改动先存本地");
+  assert.deepEqual(JSON.parse(env.store.get("dsh-tier-mode:s-alpha")), { mode: "think", level: "off", counter: false }, "改动先存本地");
 
   other.knownSession = true; // 本实例的工具刚落盘
   await tick(80);

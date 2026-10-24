@@ -64,18 +64,25 @@ test("端口被占时自动退到下一个，并在 /state 带 plugin 标记", a
   assert.equal(s.plugin, "dsh-clarify-tier");
 });
 
-test("forge_level 带对抗审密度：轻量关 / 交付 3（收敛轮）/ 极致 5（第 2 轮起）", async () => {
-  await setSession("s-counter", "loop", "off");
-  let r = await callTool("forge_level", "s-counter", 1);
-  assert.equal(r.counter.enabled, false, "轻量档不开对抗审");
-
+test("对抗审是独立开关：关=0 条；开之后密度随档位 3/5，scope 随模式", async () => {
   await setSession("s-counter", "loop", "high");
-  r = await callTool("forge_level", "s-counter", 2);
-  assert.deepEqual(r.counter, { enabled: true, maxAttacks: 3, scope: "round-changes", onlyFinalRound: true });
+  let r = await callTool("forge_level", "s-counter", 1);
+  assert.deepEqual(r.counter, { enabled: false, maxAttacks: 0, scope: "round-changes" }, "默认关");
 
-  await setSession("s-counter", "loop", "max");
+  // 打开对抗
+  await post("s-counter", { counter: true });
+  r = await callTool("forge_level", "s-counter", 2);
+  assert.deepEqual(r.counter, { enabled: true, maxAttacks: 3, scope: "round-changes" });
+
+  // 极致档：5 条
+  await post("s-counter", { level: "max" });
   r = await callTool("forge_level", "s-counter", 3);
-  assert.deepEqual(r.counter, { enabled: true, maxAttacks: 5, scope: "round-changes", fromRound: 2 });
+  assert.deepEqual(r.counter, { enabled: true, maxAttacks: 5, scope: "round-changes" });
+
+  // 思考模式：scope 变成「动手前 + 交付前」
+  await post("s-counter", { mode: "think" });
+  const t = await callTool("clarify_tier", "s-counter", 4);
+  assert.deepEqual(t.counter, { enabled: true, maxAttacks: 5, scope: "plan+delivery" });
 });
 
 test("knownSession 只认工具写过的会话（客户端写不算）", async () => {
@@ -125,7 +132,7 @@ test("空会话用内置默认：think/high，GET 不建文件", async () => {
   assert.equal(s.level, "high");
   assert.equal(s.inherited, true);
   assert.equal(s.pending, false);
-  assert.equal(s.schema, 6);
+  assert.equal(s.schema, 7);
   assert.equal(existsSync(statePath), false);
 });
 
@@ -208,7 +215,7 @@ test("老 schema 5 迁移成 default 会话", async () => {
   assert.equal(s.session, "default");
   assert.equal(s.mode, "loop");
   const disk = JSON.parse(readFileSync(statePath, "utf8"));
-  assert.equal(disk.schema, 6);
+  assert.equal(disk.schema, 7);
   assert.equal(disk.sessions.default.level, "max");
   assert.ok(existsSync(`${statePath}.bak`));
 });
