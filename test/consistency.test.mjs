@@ -75,6 +75,22 @@ test("对抗审：默认关、开之后密度随档位、scope 随模式", () =>
   assert.deepEqual(counterPlan("loop", "max", true), { enabled: true, maxAttacks: 5, scope: "round-changes" });
 });
 
+test("文案统一叫「三模式」：现行文档不再出现「双模式 / 两个模式」", () => {
+  const readme = read("README.md");
+  assert.match(readme, /三模式/, "README 必须明确写「三模式」");
+  const files = [
+    ["README.md"],
+    ["skill", "clarify-needs", "SKILL.md"],
+    ["skill", "counter-review", "SKILL.md"],
+    ["skill", "counter-review", "README.md"],
+  ];
+  for (const parts of files) {
+    const text = read(...parts);
+    assert.equal(/双模式|两个模式/.exec(text), null, `${parts.join("/")} 仍在用旧说法`);
+  }
+  assert.match(read("docs", "demo.svg"), /同框三模式/, "demo 标题要写「同框三模式」");
+});
+
 test("counter-review 技能在位，description 合规", () => {
   const text = read("skill", "counter-review", "SKILL.md");
   assert.ok(text.startsWith("---"), "SKILL.md 缺少 frontmatter");
