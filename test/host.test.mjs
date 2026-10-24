@@ -64,6 +64,20 @@ test("端口被占时自动退到下一个，并在 /state 带 plugin 标记", a
   assert.equal(s.plugin, "dsh-clarify-tier");
 });
 
+test("forge_level 带对抗审密度：轻量关 / 交付 3（收敛轮）/ 极致 5（第 2 轮起）", async () => {
+  await setSession("s-counter", "loop", "off");
+  let r = await callTool("forge_level", "s-counter", 1);
+  assert.equal(r.counter.enabled, false, "轻量档不开对抗审");
+
+  await setSession("s-counter", "loop", "high");
+  r = await callTool("forge_level", "s-counter", 2);
+  assert.deepEqual(r.counter, { enabled: true, maxAttacks: 3, scope: "round-changes", onlyFinalRound: true });
+
+  await setSession("s-counter", "loop", "max");
+  r = await callTool("forge_level", "s-counter", 3);
+  assert.deepEqual(r.counter, { enabled: true, maxAttacks: 5, scope: "round-changes", fromRound: 2 });
+});
+
 test("knownSession 只认工具写过的会话（客户端写不算）", async () => {
   await setSession("s-known", "think", "high"); // 客户端写：不该认领
   assert.equal((await (await get("s-known")).json()).knownSession, false, "客户端写不应认领实例");

@@ -96,7 +96,7 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 ## 测试
 
 ```bash
-npm test        # node --test，55 项，约 4 秒
+npm test        # node --test，58 项，约 4 秒
 npm run lint    # scripts/check.mjs：lib 下所有模块 + 所有测试逐个 node --check
 npm run verify  # lint + test，本地 CI 就用这条
 ```
@@ -105,16 +105,22 @@ npm run verify  # lint + test，本地 CI 就用这条
 
 CI：`.github/workflows/ci.yml`，推上去后在 Node 22 / 24 上跑 `npm run lint` + `npm test`。本地没有网络通道时以 `npm run verify` 为准。
 
+## 工作方式（项目内约定）
+
+**开放性作业先方案再动手**（2026-10-24 定）：新功能、方案设计、架构选型这类没定论的事，先把方案、取舍、代价摆出来讨论，敲定后再写代码；不要先实现再解释。已定论的修 bug、补测试、改文案不受此限。
+
 ## 配套技能
 
 | 技能 | 位置 | 作用 |
 |---|---|---|
 | clarify-needs | `skill/clarify-needs/` | 拿到思考档后怎么问：复述 / 确认点 / 设计树 / 共识摘要 |
+| counter-review | `skill/counter-review/` | 循环里怎么杠：六轴矩阵 → 攻击卡（触发条件/后果/检查方法）→ 三态收口；由 `forge_level.counter` 开关 |
 | loop-forge | `D:\AI\Skills\mine\loop-forge`（junction 到技能目录） | 拿到循环档后怎么磨：判据 → 每轮报数 → 自动下一轮 → 自动止损 |
 
 ```powershell
 cmd /c mklink /J "D:\AI\DSH-NEXT\skills\loop-forge" "D:\AI\Skills\mine\loop-forge"
 cmd /c mklink /J "D:\AI\DSH-NEXT\skills\clarify-needs" "%CD%\skill\clarify-needs"
+cmd /c mklink /J "D:\AI\DSH-NEXT\skills\counter-review" "%CD%\skill\counter-review"
 ```
 
 ## 数据安全

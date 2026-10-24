@@ -1,5 +1,15 @@
 # 变更记录
 
+## 1.7.0 — 2026-10-24
+- **新增技能 `counter-review`（对抗审）**：循环评审轮里当「反对者」，用六轴场景矩阵（版本/环境、机器状态、用户用法、数据形态、时序、极端量）对本轮改动逐条「万一」拷问
+- 每条攻击必须带四元组 `隐患 | 触发条件 | 后果 | 检查方法`，缺项作废；三态收口：接受（挂 D 号）/ 驳回（给证据）/ 转边界（写进已知边界）
+- **按档位预算**：轻量关；交付（high）只在收敛轮、≤3 条；极致（max）第 2 轮起每轮、≤5 条；连续 2 轮零新增 = 泛化收敛
+- `forge_level` 返回值新增 `counter` 字段（enabled / maxAttacks / scope / onlyFinalRound / fromRound），由 `COUNTER_PLAN` 统一给值
+- 与 `clarify-needs` 分工写死：它动手前审方案，本技能每轮审改动，共用同一套矩阵与三态判定
+- 技能已 junction 到两套 DSH 的 skills 目录（`D:\AI\DSH-NEXT\skills`、`D:\AI\DSH-official\home\skills`）
+- `loop-forge` 接入：评审后、修之前跑对抗审，报告块加「对抗审」一行
+- 测试 55 → 58（counter 三档取值、COUNTER_PLAN 与 LEVELS 绑定、技能 frontmatter 合规）
+
 ## 1.6.1 — 2026-10-24
 - **回退 1.6.0 的语义改动，只保留改名**：第一格的值仍是 `off`（技能退出位：不锚定、不复述、不提问、不标假设），只是滑条上显示为「常规」——即「按常规方式直接做」
 - `LEVELS` 回到 `off/high/max`；`LOOP_PLAN` 键回到 off；1.6.0 引入的 `off→low` 平移逻辑一并撤掉（没有版本跑过 1.6.0，状态文件里没有 `low`）

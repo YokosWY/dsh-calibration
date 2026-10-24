@@ -6,7 +6,7 @@ import assert from "node:assert";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { LEVELS } from "../lib/core.js";
+import { LEVELS, COUNTER_PLAN } from "../lib/core.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -66,6 +66,22 @@ test("技能里的档位表与宿主 LEVELS 是同一套", () => {
   for (const file of ["skill/clarify-needs/SKILL.md", "skill/clarify-needs/README.md"]) {
     assert.deepEqual(levelsIn(file), LEVELS, `${file} 的档位表与宿主 LEVELS 不一致`);
   }
+});
+
+test("对抗审密度与档位表绑定（轻量关 / 交付 3 / 极致 5）", () => {
+  assert.deepEqual(Object.keys(COUNTER_PLAN).sort(), [...LEVELS].sort(), "COUNTER_PLAN 的键必须与 LEVELS 一致");
+  assert.equal(COUNTER_PLAN.off.enabled, false);
+  assert.equal(COUNTER_PLAN.high.maxAttacks, 3);
+  assert.equal(COUNTER_PLAN.max.maxAttacks, 5);
+});
+
+test("counter-review 技能在位，description 合规", () => {
+  const text = read("skill", "counter-review", "SKILL.md");
+  assert.ok(text.startsWith("---"), "SKILL.md 缺少 frontmatter");
+  assert.match(text, /^name: counter-review$/m, "name 必须是 counter-review");
+  const m = text.match(/^description: "([^"]+)"$/m);
+  assert.ok(m, "SKILL.md 缺 description");
+  assert.ok(m[1].length <= 200, `description 长度 ${m[1].length}，超过 200`);
 });
 
 test("README 已知边界不再回头说全局与写死端口", () => {
