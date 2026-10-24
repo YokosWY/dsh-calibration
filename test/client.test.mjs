@@ -131,12 +131,13 @@ test("只注册一条插槽，order=10，槽位正确", () => {
   assert.equal(env.registerCalls[0].cfg.name, "conversation.input.right");
 });
 
-test("思考模式：3 档 + 1 隔离线 + 1 循环，标签二字", async () => {
+test("思考模式：3 档 + 2 隔离线 + 循环 + 对抗，标签二字", async () => {
   const tree = boot().render();
   await tick();
   assert.equal(tree.props["data-mode"], "think");
-  assert.equal(tree.children.length, 6, "3 档 + 隔离线 + 循环 + 对抗");
+  assert.equal(tree.children.length, 7, "3 档 + 隔离线 + 循环 + 隔离线 + 对抗");
   assert.equal(tree.children[3].props.className, "dct-sep");
+  assert.equal(tree.children[5].props.className, "dct-sep");
   const labels = tree.children.slice(0, 3).map((c) => c.children[0]);
   assert.deepEqual(labels, ["常规", "严格", "极致"]);
   assert.equal(tree.children[4].children[0], "循环");
@@ -200,11 +201,12 @@ test("兜底文案与宿主表逐字一致", () => {
 
 test("样式：三色走变量（柔雾调）、隔离线、待生效小点存在", () => {
   const { CSS } = boot().mod.__internals;
-  assert.match(CSS, /--dct-think:#8a82cf;--dct-loop:#6fa47f;--dct-counter:#cc8b8b/);
-  assert.match(CSS, /data-mode='loop'\] \.dct-cell\[data-on='1'\]\{background:var\(--dct-loop\)\}/);
+  assert.match(CSS, /--dct-think:#8b7fe3;--dct-loop:#69b07f;--dct-counter:#db8383/);
+  assert.match(CSS, /data-mode='loop'\] \.dct-cell\[data-on='1'\]:not\(\.dct-counter\)\{background:var\(--dct-loop\)\}/);
   assert.match(CSS, /\.dct-sep\{/);
   assert.match(CSS, /\.dct-mode\[data-on='1'\]/);
   assert.match(CSS, /data-pending='1'/);
+  assert.match(CSS, /\.dct-counter\[data-on='1'\]\{background:var\(--dct-counter\)/);
 });
 
 test("会话隔离：不同对话各存各的键，桥地址带 session", async () => {
@@ -310,7 +312,7 @@ test("对抗是独立开关：点一下只提交 counter，不动模式与档位
   const env = boot();
   const tree = env.render();
   await tick(40);
-  const btn = tree.children[5];
+  const btn = tree.children[6];
   assert.equal(btn.props["data-counter-toggle"], "off", "默认关");
   btn.props.onClick();
   await tick(40);
