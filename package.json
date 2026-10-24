@@ -9,7 +9,7 @@
     "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },
-  "description": "一框双模式档位条：思考（关闭/严格/极致）与循环（轻量/交付/极致）共用一根框，右侧隔离的「循环」切模式，配 clarify_tier 与 forge_level 两个工具。",
+  "description": "DSH 输入框档位条：思考（常规/严格/极致）与循环（轻量/交付/极致）两种模式，外加独立的「对抗」开关；模型通过 clarify_tier 与 forge_level 读取。",
   "license": "MIT",
   "scripts": {
     "test": "node --test \"test/*.test.mjs\"",
