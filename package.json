@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-clarify-tier",
-  "version": "1.6.0",
+  "version": "1.5.3",
   "private": true,
   "type": "module",
   "main": "./lib/index.js",

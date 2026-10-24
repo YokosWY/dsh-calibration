@@ -98,8 +98,8 @@ test("POST 响应直接带 pending / turnLocked（客户端少发一次 GET）",
 
   // 本轮已有快照（turn 5），再改档就是「下轮生效」
   await callTool("clarify_tier", "s-post", 5);
-  const locked = await (await post("s-post", { level: "low" })).json();
-  assert.equal(locked.level, "low");
+  const locked = await (await post("s-post", { level: "off" })).json();
+  assert.equal(locked.level, "off");
   assert.equal(locked.turnLocked, true);
   assert.equal(locked.pending, true, "响应里要带 pending，客户端才能不补 GET");
 });
@@ -117,13 +117,13 @@ test("空会话用内置默认：think/high，GET 不建文件", async () => {
 
 test("每个对话各用各的：写 A 不影响 B", async () => {
   await setSession("s-iso-a", "loop", "max");
-  await setSession("s-iso-b", "think", "low");
+  await setSession("s-iso-b", "think", "off");
   const a = await (await get("s-iso-a")).json();
   const b = await (await get("s-iso-b")).json();
   assert.equal(a.mode, "loop");
   assert.equal(a.level, "max");
   assert.equal(b.mode, "think");
-  assert.equal(b.level, "low");
+  assert.equal(b.level, "off");
 });
 
 test("同一会话内切模式不丢档位", async () => {

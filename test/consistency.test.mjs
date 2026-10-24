@@ -49,7 +49,7 @@ test("clarify_tier 的工具描述与宿主档位表同字", () => {
   const hit = libFiles.map((f) => [f, read(f).match(/name: "clarify_tier",\s*description:\s*\n?\s*"([^"]+)"/)]).find(([, m]) => m);
   assert.ok(hit, "lib 下找不到 clarify_tier 的描述");
   const [file, m] = hit;
-  assert.ok(m[1].includes("常规/严格/极致"), `${file} 的工具描述没跟档位表对齐：${m[1]}`);
+  assert.ok(m[1].includes("关闭/严格/极致"), `${file} 的工具描述没跟档位表对齐：${m[1]}`);
 });
 
 test("skill 的当前状态表用「极致」", () => {

@@ -138,7 +138,7 @@ test("思考模式：3 档 + 1 隔离线 + 1 循环，标签二字", async () =>
   assert.equal(tree.children.length, 5);
   assert.equal(tree.children[3].props.className, "dct-sep");
   const labels = tree.children.slice(0, 3).map((c) => c.children[0]);
-  assert.deepEqual(labels, ["常规", "严格", "极致"]);
+  assert.deepEqual(labels, ["关闭", "严格", "极致"]);
   assert.equal(tree.children[4].children[0], "循环");
 });
 
@@ -175,9 +175,9 @@ test("点档位只提交 level，点循环只提交 mode", async () => {
   const env = boot();
   const tree = env.render();
   await tick();
-  tree.children[0].props.onClick(); // 常规
+  tree.children[0].props.onClick(); // 关闭
   await tick();
-  assert.deepEqual(env.posts.at(-1), { level: "low" });
+  assert.deepEqual(env.posts.at(-1), { level: "off" });
   env.render().children[4].props.onClick(); // 循环
   await tick();
   assert.deepEqual(env.posts.at(-1), { mode: "loop" });
@@ -188,7 +188,7 @@ test("文案优先用 /state 下发，桥缺失才用兜底", () => {
   const meta = { labels: { think: { off: "甲", high: "乙", max: "丙" } }, titles: { think: { high: "乙的说明" } } };
   assert.equal(resolveLabels(meta, "think").high, "乙");
   assert.equal(resolveTitles(meta, "think").high, "乙的说明");
-  assert.equal(resolveLabels(null, "loop").low, "轻量");
+  assert.equal(resolveLabels(null, "loop").off, "轻量");
   assert.equal(resolveTitles(null, "loop").max.includes("8 轮"), true);
 });
 
@@ -211,7 +211,7 @@ test("会话隔离：不同对话各存各的键，桥地址带 session", async 
   const a = env.render("s-alpha");
   env.render("s-beta").children[0].props.onClick();
   await tick();
-  assert.deepEqual(env.posts.at(-1), { level: "low" });
+  assert.deepEqual(env.posts.at(-1), { level: "off" });
   env.store.set("dsh-tier-mode:s-beta", JSON.stringify({ mode: "loop", level: "max" }));
   const b = env.render("s-beta");
   assert.equal(b.props["data-mode"], "loop", "beta 用自己的本地值");
@@ -236,7 +236,7 @@ test("桥不可达：只探一遍端口，TTL 内再点不再重扫", async () =
 test("宿主在 POST 响应里带 pending 时，点一次档只发一次请求", async () => {
   const env = boot(
     { mode: "think", level: "high", plugin: "dsh-clarify-tier" },
-    { postBody: { ok: true, session: "s-alpha", mode: "think", level: "low", pending: false, turnLocked: true } },
+    { postBody: { ok: true, session: "s-alpha", mode: "think", level: "off", pending: false, turnLocked: true } },
   );
   const tree = env.render();
   await tick(30);
@@ -245,7 +245,7 @@ test("宿主在 POST 响应里带 pending 时，点一次档只发一次请求",
   tree.children[0].props.onClick();
   await tick(30);
   assert.equal(stateGets(), before, "POST 已带结果，不该再补一次 GET");
-  assert.deepEqual(env.posts.at(-1), { level: "low" });
+  assert.deepEqual(env.posts.at(-1), { level: "off" });
 });
 
 test("宿主 POST 不带 pending（老宿主）时退回拉一次", async () => {
@@ -364,7 +364,7 @@ test("单实例：只有一套 DSH 时不依赖工具落盘，直接认领并写
   tree.children[0].props.onClick();
   await tick(40);
   assert.equal(env.posts.length, 1, "单实例应直接认领，不必等工具写");
-  assert.deepEqual(env.posts[0], { level: "low" });
+  assert.deepEqual(env.posts[0], { level: "off" });
 });
 
 test("两套都不认领：不连 SSE、点击只存本地，认领后补写一次", async () => {
@@ -387,10 +387,10 @@ test("两套都不认领：不连 SSE、点击只存本地，认领后补写一�
   tree.children[0].props.onClick();
   await tick(30);
   assert.equal(env.posts.length, 0, "未认领时不该写任何实例");
-  assert.deepEqual(JSON.parse(env.store.get("dsh-tier-mode:s-alpha")), { mode: "think", level: "low" }, "改动先存本地");
+  assert.deepEqual(JSON.parse(env.store.get("dsh-tier-mode:s-alpha")), { mode: "think", level: "off" }, "改动先存本地");
 
   other.knownSession = true; // 本实例的工具刚落盘
   await tick(80);
   assert.equal(env.posts.length, 1, "认领后应把攒下的改动补写一次");
-  assert.deepEqual(env.posts[0], { level: "low" });
+  assert.deepEqual(env.posts[0], { level: "off" });
 });

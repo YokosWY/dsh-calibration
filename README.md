@@ -6,7 +6,7 @@
 [![node](https://img.shields.io/badge/node-%E2%89%A522-7c6cf0)](package.json)
 
 > 给 DSH 输入框加**一根框、两个模式**的档位条：
-> `常规 | 严格 | 极致 ‖ 循环`（思考）↔ `轻量 | 交付 | 极致 ‖ 循环`（循环）。
+> `关闭 | 严格 | 极致 ‖ 循环`（思考）↔ `轻量 | 交付 | 极致 ‖ 循环`（循环）。
 > 拨档 → 模型通过 `clarify_tier` / `forge_level` 读到 → 决定开工问多深、交付后磨几轮。
 
 ![demo](docs/demo.svg)
@@ -14,7 +14,7 @@
 ## 一根框两个模式
 
 ```
-思考：  [常规] [严格] [极致] ‖ [循环]        ← 紫
+思考：  [关闭] [严格] [极致] ‖ [循环]        ← 紫
 循环：  [轻量] [交付] [极致] ‖ [循环]亮     ← 琥珀
 ```
 
@@ -23,7 +23,7 @@
 
 | 模式 | 格 | 含义 | 模型读到 |
 |---|---|---|---|
-| 思考 | 常规 | 复述 + 2 确认点 + 风险提示 + 假设清单（≤3） | `clarify_tier=low` |
+| 思考 | 关闭 | 不锚定、不循环，直接执行 | `clarify_tier=off`、`forge_level=off` |
 | 思考 | 严格（默认） | 复述 + 2 确认点 + 回滚 + 验收 + 失败分支 | `clarify_tier=high` |
 | 思考 | 极致 | 严格之上再加反例与代价、对抗自检、对抗复审 | `clarify_tier=max` |
 | 循环 | 轻量 | 3 轮纯自检，适合小修小补 | `forge_level=lite` |
@@ -38,14 +38,14 @@
 {
   "schema": 6,
   "sessions": {
-    "<sessionId>": { "mode": "think" | "loop", "level": "low" | "high" | "max", "updatedAt": "…" }
+    "<sessionId>": { "mode": "think" | "loop", "level": "off" | "high" | "max", "updatedAt": "…" }
   }
 }
 ```
 
 - **会话键**：客户端用插槽 inject 给的 `sessionId`，经 `?session=` 传给桥；工具用 `exec.agent.session.id`，读不到才落 `default`
-- `clarify_tier`：思考模式返回 `level`（low=常规 / high=严格 / max=极致）；循环模式返回 `off` 作为「不叠加锚定」的信号（旧版本存下的 `off` 档位值会自动平移成 `low`）
-- `forge_level`：思考模式返回 `off`；循环模式把 `low/high/max` 映射成 `lite/high/max` 与 3/5/8 轮
+- `clarify_tier`：思考模式返回 `level`；循环模式返回 `off`（不叠加锚定）
+- `forge_level`：思考模式返回 `off`；循环模式把 `off/high/max` 映射成 `lite/high/max` 与 3/5/8 轮
 - **每轮快照**：一条用户消息 = 一轮（轮号取 `agent.phase.turn`）。开工第一次调工具时，把当时的档位记成本轮快照（`turn{id,mode,level}`）；本轮内再点档位条只改「下轮的值」，条尾显示一个琥珀小点（`pending`）
 - 下一轮开工自动换用新值；取不到轮 id 时退回实时值（不做轮内保护，但功能不坏）
 - 没单独设置过的对话，继承 `default` 会话（迁移自 0.6 的全局值），再没有就用内置 `think/high`
