@@ -14,33 +14,33 @@
 
   <text class="sub" x="32" y="108">思考</text>
   <g>
-    <rect x="80" y="88" width="64" height="28" rx="14" fill="none" stroke="#8b7fe3" stroke-opacity=".45"/>
+    <rect x="80" y="88" width="64" height="28" rx="14" fill="none" stroke="#877be3" stroke-opacity=".45"/>
     <text class="cell" x="112" y="107" text-anchor="middle">常规</text>
-    <rect x="148" y="88" width="64" height="28" rx="14" fill="#8b7fe3"/>
+    <rect x="148" y="88" width="64" height="28" rx="14" fill="#877be3"/>
     <text class="cell on" x="180" y="107" text-anchor="middle">严格</text>
-    <rect x="216" y="88" width="64" height="28" rx="14" fill="none" stroke="#8b7fe3" stroke-opacity=".45"/>
+    <rect x="216" y="88" width="64" height="28" rx="14" fill="none" stroke="#877be3" stroke-opacity=".45"/>
     <text class="cell" x="248" y="107" text-anchor="middle">极致</text>
     <line x1="288" y1="92" x2="288" y2="112" stroke="#7f7f8a" stroke-opacity=".6"/>
     <rect x="294" y="88" width="64" height="28" rx="14" fill="none" stroke="#7f7f8a" stroke-opacity=".5"/>
     <text class="mode" x="326" y="107" text-anchor="middle">循环</text>
     <line x1="364" y1="92" x2="364" y2="112" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="372" y="88" width="64" height="28" rx="14" fill="none" stroke="#db8383" stroke-opacity=".5"/>
+    <rect x="372" y="88" width="64" height="28" rx="14" fill="none" stroke="#da7f7f" stroke-opacity=".5"/>
     <text class="mode" x="404" y="107" text-anchor="middle">对抗</text>
   </g>
 
   <text class="sub" x="32" y="160">循环</text>
   <g>
-    <rect x="80" y="140" width="64" height="28" rx="14" fill="none" stroke="#69b07f" stroke-opacity=".45"/>
+    <rect x="80" y="140" width="64" height="28" rx="14" fill="none" stroke="#66ae7c" stroke-opacity=".45"/>
     <text class="cell" x="112" y="159" text-anchor="middle">轻量</text>
-    <rect x="148" y="140" width="64" height="28" rx="14" fill="none" stroke="#69b07f" stroke-opacity=".45"/>
+    <rect x="148" y="140" width="64" height="28" rx="14" fill="none" stroke="#66ae7c" stroke-opacity=".45"/>
     <text class="cell" x="180" y="159" text-anchor="middle">交付</text>
-    <rect x="216" y="140" width="64" height="28" rx="14" fill="#69b07f"/>
+    <rect x="216" y="140" width="64" height="28" rx="14" fill="#66ae7c"/>
     <text class="cell on" x="248" y="159" text-anchor="middle">极致</text>
     <line x1="288" y1="144" x2="288" y2="164" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="294" y="140" width="64" height="28" rx="14" fill="#69b07f"/>
+    <rect x="294" y="140" width="64" height="28" rx="14" fill="#66ae7c"/>
     <text class="mode on" x="326" y="159" text-anchor="middle">循环</text>
     <line x1="364" y1="144" x2="364" y2="164" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="372" y="140" width="64" height="28" rx="14" fill="#db8383"/>
+    <rect x="372" y="140" width="64" height="28" rx="14" fill="#da7f7f"/>
     <text class="mode on" x="404" y="159" text-anchor="middle">对抗</text>
   </g>
 

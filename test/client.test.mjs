@@ -201,7 +201,7 @@ test("兜底文案与宿主表逐字一致", () => {
 
 test("样式：三色走变量（柔雾调）、隔离线、待生效小点存在", () => {
   const { CSS } = boot().mod.__internals;
-  assert.match(CSS, /--dct-think:#8b7fe3;--dct-loop:#69b07f;--dct-counter:#db8383/);
+  assert.match(CSS, /--dct-think:#877be3;--dct-loop:#66ae7c;--dct-counter:#da7f7f/);
   assert.match(CSS, /data-mode='loop'\] \.dct-cell\[data-on='1'\]:not\(\.dct-counter\)\{background:var\(--dct-loop\)\}/);
   assert.match(CSS, /\.dct-sep\{/);
   assert.match(CSS, /\.dct-mode\[data-on='1'\]/);
