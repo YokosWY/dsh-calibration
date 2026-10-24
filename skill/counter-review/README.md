@@ -41,7 +41,7 @@ A3 [边界] 10 个端口全占时退化为只读 → 已写 README 已知边界
 
 - 方法全文（含三个真实翻车样例）：`docs/method.md`
 - 与 `clarify-needs` 的分工：它动手前审方案，本技能每轮审改动，共用同一套矩阵与判定。
-- 由插件 `dsh-clarify-tier` 的 `forge_level.counter` 字段开关。
+- 由插件 `dsh-calibration` 的 `forge_level.counter` 字段开关。
 
 ## 版本
 

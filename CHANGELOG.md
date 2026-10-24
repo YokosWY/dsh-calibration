@@ -1,5 +1,19 @@
 # 变更记录
 
+## 1.9.0 — 2026-10-24
+- **改名 `dsh-clarify-tier` → `dsh-calibration`**：三种模式（思考/循环/对抗）+ 强度三档，本质是「把用力程度校准到任务」，旧名只覆盖了「需求锚定」一角
+- 一并改：包名 `@local/dsh-calibration`、客户端 bundle id、`/state` 的 `plugin` 标记、cordis 节点 id、状态文件 `storages/calibration.json`、调试文件 `calibration-debug.jsonl`
+- **旧状态自动迁移**：新文件不存在时读 `storages/clarify-tier.json`（v6/v7 都认），补齐后写到新文件名；旧文件原样保留可回滚
+- 端口环境变量改为 `DSH_CALIBRATION_PORT`，仍兼容旧名 `DSH_CLARIFY_TIER_PORT`
+- 工具名不变：`clarify_tier` / `forge_level`（AGENTS 与两个技能都在引用，改名只会惹麻烦）
+- 顺带：界面去掉悬停解释，只留按钮本体（1.8.5 的内容并入本版）
+- 测试 61 项全过
+
+## 1.8.5 — 2026-10-24
+- **去掉悬停解释**：档位格、循环、对抗、根节点都不再挂 `title`，只留按钮本体（根节点保留 `aria-label`，读屏不受影响）
+- 新增守卫：任一子节点或根节点带 `title` 即测试失败
+- 测试 60 → 61
+
 ## 1.8.4 — 2026-10-24
 - **文案统一为「三模式」**：README 标题/开头/正文、`clarify-needs`、`counter-review` 变更记录、`demo.svg` 标题与副标题、GitHub About、`package.json` description，不再出现「双模式 / 两个模式」；关系写清：思考 ⇄ 循环 互斥切换，对抗可叠加
 - **新增一致性守卫**：现行文档（README + 两个 SKILL/README + demo.svg）出现「双模式 / 两个模式」直接测试失败，README 必须含「三模式」

@@ -40,7 +40,7 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 function Say($message) { Write-Host "  $message" }
 function Fail($message) { Write-Host "✗ $message" -ForegroundColor Red; exit 1 }
 
-Write-Host "`n=== dsh-clarify-tier 安装器 ===" -ForegroundColor Cyan
+Write-Host "`n=== dsh-calibration 安装器 ===" -ForegroundColor Cyan
 Say "DSH home     : $DshHome"
 Say "profile      : $Profile"
 Say "插件目录     : $PluginDir"
@@ -60,7 +60,7 @@ if (-not $Uninstall) {
   if (-not $plugin.name) { Fail "插件 package.json 里没有 name" }
   if (-not $plugin.dsh.bundle.patch) { Fail "插件没有声明 dsh.bundle.patch（DSH 需要它来挂进组合包）" }
 }
-$name = if ($Uninstall) { "@local/dsh-clarify-tier" } else { $plugin.name }
+$name = if ($Uninstall) { "@local/dsh-calibration" } else { $plugin.name }
 
 # ── 读 profile 清单 ────────────────────────────────────────────────────────
 $raw = Get-Content $manifestPath -Raw -Encoding utf8

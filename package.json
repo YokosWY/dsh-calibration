@@ -1,6 +1,6 @@
 {
-  "name": "@local/dsh-clarify-tier",
-  "version": "1.8.4",
+  "name": "@local/dsh-calibration",
+  "version": "1.9.0",
   "private": true,
   "author": "YokosWY",
   "type": "module",

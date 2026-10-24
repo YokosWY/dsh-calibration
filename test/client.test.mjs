@@ -12,7 +12,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const tick = (ms = 20) => new Promise((r) => setTimeout(r, ms));
 const CODE = readFileSync(join(here, "..", "lib", "client.js"), "utf8");
 
-function boot(remote = { mode: "think", level: "high", plugin: "dsh-clarify-tier" }, options = {}) {
+function boot(remote = { mode: "think", level: "high", plugin: "dsh-calibration" }, options = {}) {
   const registerCalls = [];
   const posts = [];
   const debugs = [];
@@ -120,7 +120,7 @@ function boot(remote = { mode: "think", level: "high", plugin: "dsh-clarify-tier
 }
 
 test("模块 id 等于包名（防 duplicate factory）", () => {
-  assert.equal(boot().loadedId, "@local/dsh-clarify-tier");
+  assert.equal(boot().loadedId, "@local/dsh-calibration");
 });
 
 test("只注册一条插槽，order=10，槽位正确", () => {
@@ -129,6 +129,16 @@ test("只注册一条插槽，order=10，槽位正确", () => {
   assert.equal(env.registerCalls[0].cfg.id, "tier-bar");
   assert.equal(env.registerCalls[0].cfg.order, 10);
   assert.equal(env.registerCalls[0].cfg.name, "conversation.input.right");
+});
+
+test("悬停解释已移除：档位格与两个开关都不带 title", async () => {
+  const tree = boot().render();
+  await tick();
+  for (const [i, child] of tree.children.entries()) {
+    if (child.props && child.props.className && child.props.className.includes("dct-sep")) continue;
+    assert.equal("title" in child.props, false, `第 ${i} 个子节点还带 title`);
+  }
+  assert.equal("title" in tree.props, false, "根节点还带 title");
 });
 
 test("思考模式：3 档 + 2 隔离线 + 循环 + 对抗，标签二字", async () => {
@@ -238,7 +248,7 @@ test("桥不可达：只探一遍端口，TTL 内再点不再重扫", async () =
 
 test("宿主在 POST 响应里带 pending 时，点一次档只发一次请求", async () => {
   const env = boot(
-    { mode: "think", level: "high", plugin: "dsh-clarify-tier" },
+    { mode: "think", level: "high", plugin: "dsh-calibration" },
     { postBody: { ok: true, session: "s-alpha", mode: "think", level: "off", pending: false, turnLocked: true } },
   );
   const tree = env.render();
@@ -321,11 +331,11 @@ test("对抗是独立开关：点一下只提交 counter，不动模式与档位
 
 test("两套 DSH 同开：当前桥不认识本会话时，切到认识它的那个端口", async () => {
   const env = boot(
-    { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false },
+    { mode: "think", level: "high", plugin: "dsh-calibration", knownSession: false },
     {
       stateByPort: {
-        43871: { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false },
-        43872: { mode: "think", level: "max", plugin: "dsh-clarify-tier", knownSession: true },
+        43871: { mode: "think", level: "high", plugin: "dsh-calibration", knownSession: false },
+        43872: { mode: "think", level: "max", plugin: "dsh-calibration", knownSession: true },
       },
     },
   );
@@ -339,7 +349,7 @@ test("两套 DSH 同开：当前桥不认识本会话时，切到认识它的那
 });
 
 test("老宿主没有 knownSession 字段：不额外扫端口", async () => {
-  const env = boot({ mode: "think", level: "high", plugin: "dsh-clarify-tier" });
+  const env = boot({ mode: "think", level: "high", plugin: "dsh-calibration" });
   env.render();
   await tick(60);
   const probes = env.fetches.filter((f) => f.url.includes("session=s-alpha") && f.url.includes("/state")).length;
@@ -347,12 +357,12 @@ test("老宿主没有 knownSession 字段：不额外扫端口", async () => {
 });
 
 test("暂时谁都不认识本会话：过几秒自动重试，认领后停止轮询", async () => {
-  const later = { mode: "think", level: "max", plugin: "dsh-clarify-tier", knownSession: false };
+  const later = { mode: "think", level: "max", plugin: "dsh-calibration", knownSession: false };
   const env = boot(
-    { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false },
+    { mode: "think", level: "high", plugin: "dsh-calibration", knownSession: false },
     {
       stateByPort: {
-        43871: { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false },
+        43871: { mode: "think", level: "high", plugin: "dsh-calibration", knownSession: false },
         43872: later,
       },
     },
@@ -370,7 +380,7 @@ test("暂时谁都不认识本会话：过几秒自动重试，认领后停止�
 
 test("单实例：只有一套 DSH 时不依赖工具落盘，直接认领并写入", async () => {
   const env = boot(
-    { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false },
+    { mode: "think", level: "high", plugin: "dsh-calibration", knownSession: false },
     { onlyPorts: [43871] },
   );
   const tree = env.render();
@@ -382,13 +392,13 @@ test("单实例：只有一套 DSH 时不依赖工具落盘，直接认领并写
 });
 
 test("两套都不认领：不连 SSE、点击只存本地，认领后补写一次", async () => {
-  const other = { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false };
+  const other = { mode: "think", level: "high", plugin: "dsh-calibration", knownSession: false };
   const env = boot(
-    { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false },
+    { mode: "think", level: "high", plugin: "dsh-calibration", knownSession: false },
     {
       onlyPorts: [43871, 43872],
       stateByPort: {
-        43871: { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false },
+        43871: { mode: "think", level: "high", plugin: "dsh-calibration", knownSession: false },
         43872: other,
       },
     },

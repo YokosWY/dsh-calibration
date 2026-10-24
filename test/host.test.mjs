@@ -27,7 +27,7 @@ mod.apply({
 });
 
 const BASE = "http://127.0.0.1:43992/state";
-const statePath = join(home, "storages", "clarify-tier.json");
+const statePath = join(home, "storages", "calibration.json");
 const NL = String.fromCharCode(10);
 
 async function ready() {
@@ -61,7 +61,7 @@ const callTool = async (name, session, turn) => tools.get(name).execute(undefine
 
 test("端口被占时自动退到下一个，并在 /state 带 plugin 标记", async () => {
   const s = await (await get()).json();
-  assert.equal(s.plugin, "dsh-clarify-tier");
+  assert.equal(s.plugin, "dsh-calibration");
 });
 
 test("对抗审是独立开关：关=0 条；开之后密度随档位 3/5，scope 随模式", async () => {

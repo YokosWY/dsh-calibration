@@ -1,7 +1,7 @@
-# dsh-clarify-tier
+# dsh-calibration
 
-[![release](https://img.shields.io/github/v/release/YokosWY/dsh-clarify-tier?color=877be3)](https://github.com/YokosWY/dsh-clarify-tier/releases)
-[![license](https://img.shields.io/github/license/YokosWY/dsh-clarify-tier?color=877be3)](LICENSE)
+[![release](https://img.shields.io/github/v/release/YokosWY/dsh-calibration?color=877be3)](https://github.com/YokosWY/dsh-calibration/releases)
+[![license](https://img.shields.io/github/license/YokosWY/dsh-calibration?color=877be3)](LICENSE)
 [![platform](https://img.shields.io/badge/DSH-web%20client-877be3)](#安装)
 [![node](https://img.shields.io/badge/node-%E2%89%A522-877be3)](package.json)
 
@@ -23,7 +23,7 @@
 - **思考**（默认）与 **循环** 互斥：拨「循环」在两者之间切，前三格的语义从「问多深」变成「磨几轮」，标签与配色一起换；
 - **对抗** 是第三种模式，可叠加：它不改变前三格，只决定这一轮要不要额外加一遍「万一」审查（思考下=动手前审方案 + 交付前审改动；循环下=每轮审改动）。与前两种任意组合，互不影响。
 
-配色（2026-10-24 定版）：思考 `#877be3`、循环 `#66ae7c`、对抗 `#da7f7f`，只在客户端 CSS 的 `--dct-think/--dct-loop/--dct-counter` 三个变量里定义。**循环与对抗之间另有一条隔离线**；对抗一旦亮起就保持红，不跟循环换色。
+界面不挂悬停解释（2026-10-24 起只留按钮本体，避免一格一个 tip 打断视线）；配色（2026-10-24 定版）：思考 `#877be3`、循环 `#66ae7c`、对抗 `#da7f7f`，只在客户端 CSS 的 `--dct-think/--dct-loop/--dct-counter` 三个变量里定义。**循环与对抗之间另有一条隔离线**；对抗一旦亮起就保持红，不跟循环换色。
 
 | 模式 | 格 | 含义 | 模型读到 |
 |---|---|---|---|
@@ -62,7 +62,7 @@
 - **每轮快照**：一条用户消息 = 一轮（轮号取 `agent.phase.turn`）。开工第一次调工具时，把当时的设置记成本轮快照（`turn{id,mode,level,counter}`）；本轮内再点档位条只改「下轮的值」，条尾显示一个循环色小点（`pending`）
 - 下一轮开工自动换用新值；取不到轮 id 时退回实时值（不做轮内保护，但功能不坏）
 - 没单独设置过的对话，继承 `default` 会话（迁移自 0.6 的全局值），再没有就用内置 `think/high`
-- 文件：`$DSH_HOME/storages/clarify-tier.json`；每会话只写自己那条，切模式不会丢档位；最多保留 100 个会话（删最旧的非 `default`）
+- 文件：`$DSH_HOME/storages/calibration.json`；每会话只写自己那条，切模式不会丢档位；最多保留 100 个会话（删最旧的非 `default`）
 - **实时同步**：`GET /events?session=…` 只推本会话；同一对话开两个窗口才互通，跨对话互不干扰；普通断线按 `retry: 2000` 自动重连，连接被彻底关掉（`readyState=2`）时客户端按 `CONFIG.reconnectDelay` 自己重建，最多 `CONFIG.maxReconnects` 次
 
 ## 安装
@@ -110,7 +110,7 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 ## 测试
 
 ```bash
-npm test        # node --test，60 项，约 4 秒
+npm test        # node --test，61 项，约 4 秒
 npm run lint    # scripts/check.mjs：lib 下所有模块 + 所有测试逐个 node --check
 npm run verify  # lint + test，本地 CI 就用这条
 ```
@@ -147,7 +147,7 @@ cmd /c mklink /J "D:\AI\DSH-NEXT\skills\counter-review" "%CD%\skill\counter-revi
 ## 数据安全
 
 - **读不出来不覆写**：坏 JSON / 未知 schema（如未来的 `schema:8`）只返回默认值并标 `corrupt` / `unsupported`，原文件原样保留
-- **迁移前留备份**：旧的 `{tier, forge}` 迁移时先写 `clarify-tier.json.bak`
+- **迁移前留备份**：旧的 `{tier, forge}` 迁移时先写 `calibration.json.bak`
 - **原子写**：临时文件 + `rename`，避免写到一半断电留下半截 JSON
 - **写失败不谎报**：磁盘不可写时 POST 返回 500（`error: write failed`），不返回 200
 
@@ -159,12 +159,12 @@ cmd /c mklink /J "D:\AI\DSH-NEXT\skills\counter-review" "%CD%\skill\counter-revi
 - **面板显示的是「最后一次认准后」的值**：认准之前改的档，认准后以宿主值为准；要立刻用新档就在认准后再点一次
 - **降级后不会自己变回来**：端口全占 / 宿主没起时，控件停在只读（`!`）；恢复靠下一次成功写入、切窗口，或 SSE 重建成功
 - **SSE 重建有上限**（`CONFIG.maxReconnects`，默认 3 次、间隔 2 秒）：连不上就停手，不做无限重试；重建时会顺手作废端口缓存，宿主换了端口也能重新发现
-- 状态文件只有一个（`storages/clarify-tier.json`）：并发写按「最后落盘为准」，没有跨进程锁
+- 状态文件只有一个（`storages/calibration.json`）：并发写按「最后落盘为准」，没有跨进程锁
 - 工具返回的是调用时刻的值；中途改档要再调一次
 - 循环模式不叠加思考档：需要强提问就先退回思考模式；但「对抗」在思考/循环两种强度模式下都能叠加，不冲突
 - 多窗口实时同步：SSE 推送，同一对话两窗同时改动以最后落盘为准；SSE 不可用时退回「切窗口重新对齐」
 - 快照是**按轮**的：只影响「我这一轮用什么」，不改你拨出来的值；别的对话互不影响
-- **诊断默认关**：启动时不再往宿主写 `clarify-tier-debug.jsonl`（那个文件不轮转，会一直长）。要抓注册链路时在控制台执行 `localStorage.setItem("dsh-tier-debug","1")` 再刷新，用完删掉这个键
+- **诊断默认关**：启动时不再往宿主写 `calibration-debug.jsonl`（那个文件不轮转，会一直长）。要抓注册链路时在控制台执行 `localStorage.setItem("dsh-tier-debug","1")` 再刷新，用完删掉这个键
 
 ## 踩过的坑（别重犯）
 
@@ -178,7 +178,7 @@ cmd /c mklink /J "D:\AI\DSH-NEXT\skills\counter-review" "%CD%\skill\counter-revi
 ## 卸载
 
 1. `install-profile.ps1 -Uninstall`
-2. 删 `$DSH_HOME/storages/clarify-tier.json`
+2. 删 `$DSH_HOME/storages/calibration.json`
 3. 重开应用
 
 ## License
