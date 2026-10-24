@@ -73,7 +73,11 @@ function boot(remote = { mode: "think", level: "high", plugin: "dsh-clarify-tier
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(options.postBody || {}) });
       }
       if (options.failGet) return Promise.reject(new Error("ECONNREFUSED"));
-      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...remote }) });
+      // 按端口返回不同状态：模拟两套 DSH 各有一个桥
+      const byPort = options.stateByPort || {};
+      const port = Number((target.match(/:(\d+)\//) || [])[1]);
+      const payload = byPort[port] || remote;
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...payload }) });
     },
     console,
     Promise,
@@ -296,4 +300,29 @@ test("离线与待生效同时成立时，title 两件事都说", () => {
   assert.match(both, /下一轮生效/);
   assert.equal(barTitle(false, false, true), "循环模式");
   assert.equal(barTitle(false, false, false), "思考模式");
+});
+
+test("两套 DSH 同开：当前桥不认识本会话时，切到认识它的那个端口", async () => {
+  const env = boot(
+    { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false },
+    {
+      stateByPort: {
+        43871: { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false },
+        43872: { mode: "think", level: "max", plugin: "dsh-clarify-tier", knownSession: true },
+      },
+    },
+  );
+  env.render();
+  await tick(80);
+  assert.equal(env.store.get("dsh-tier-port"), "43872", "应切到认识本会话的那一端");
+  const last = env.fetches.filter((f) => f.url.includes("/state")).at(-1);
+  assert.match(last.url, /:43872\//, "认领后读写都应走新端口");
+});
+
+test("老宿主没有 knownSession 字段：不额外扫端口", async () => {
+  const env = boot({ mode: "think", level: "high", plugin: "dsh-clarify-tier" });
+  env.render();
+  await tick(60);
+  const probes = env.fetches.filter((f) => f.url.includes("session=s-alpha") && f.url.includes("/state")).length;
+  assert.ok(probes <= 2, `不该为认领实例额外扫：${probes}`);
 });

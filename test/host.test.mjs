@@ -64,6 +64,12 @@ test("端口被占时自动退到下一个，并在 /state 带 plugin 标记", a
   assert.equal(s.plugin, "dsh-clarify-tier");
 });
 
+test("knownSession：本实例状态里有这个会话才为 true", async () => {
+  await setSession("s-known", "think", "high");
+  assert.equal((await (await get("s-known")).json()).knownSession, true);
+  assert.equal((await (await get("s-not-here")).json()).knownSession, false, "没写过的会话应为 false");
+});
+
 test("退让成功时日志只报一次就绪，且报的是真绑上的端口", () => {
   const ready = logs.filter((line) => line.includes("桥接就绪"));
   assert.equal(ready.length, 1, `「桥接就绪」应只有一条，实际：${ready.join(" | ")}`);

@@ -76,6 +76,7 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 | 形态 | `cordis.patch.yml` + `package.json` 的 `dsh.client` | 进 cordis 树，客户端产物编进启动包 |
 
 - 桥：`http://127.0.0.1:43871/state`（GET/POST）与 `/events`（SSE）；只绑回环，宿主在 `43871–43880` 里取第一个能绑的端口，客户端按同区间探测 `/state` 的 `plugin` 标记自动对齐，两套 DSH 同时开着也不打架
+- **两套 DSH 同开时靠「会话归属」认桥**：`/state` 带 `knownSession`（本实例的状态文件里有没有这个会话），客户端发现当前桥不认识本会话时，扫一遍端口切到认识它的那个——`plugin` 标记只能证明「是同一个插件」，分不出是哪个实例
 - **点一次档只发一个 POST**：宿主在 POST 响应里直接回带 `mode/level/pending/turnLocked`，客户端不再补 GET（老宿主不回 `pending` 才退回拉一次）
 - **端口发现失败后 3 秒内不重扫**：一轮探空会记住时间，期间点击不再打 10 个 fetch；挂载时 pull 与 SSE 并发要端口，同一时刻只跑一轮发现
 - 档名 / 悬停 / 轮次表只在宿主定义一次，客户端从 `/state` 的 `labels`、`titles` 读；离线兜底文案由测试锁死与宿主一致
@@ -93,12 +94,12 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 ## 测试
 
 ```bash
-npm test        # node --test，48 项，约 4 秒
+npm test        # node --test，51 项，约 4 秒
 npm run lint    # scripts/check.mjs：lib 下所有模块 + 所有测试逐个 node --check
 npm run verify  # lint + test，本地 CI 就用这条
 ```
 
-覆盖：状态默认值、模式/档位合并写、非法值 400、标量与坏 JSON 400、两种老 schema 迁移 + `.bak`、坏 JSON 与未知 schema 不覆写（含「未来 schema 带 tier/forge」也不降级）、字段坏只保留能认的一半、两个工具投影、跨站 Origin 403（读/写/预检/null/子域伪装）、本机 Origin 回显 204、`text/plain` 415、写盘失败 500、SSE 首帧与写入广播（两个订阅者收同一帧）、跨站 SSE 403、四格结构、两套标签、循环格亮起、只提交变化维度、focus 重新对齐、SSE 推送落本地与坏帧容错、`/state` 文案优先、兜底文案与宿主表逐字一致、琥珀样式与隔离线、端口被占时退让到下一个并带 `plugin` 标记；另有**交互与容错** 7 项（桥不可达时只探一遍端口且 TTL 内不重扫、POST 带回 pending 时不再补 GET、老宿主缺 pending 时补一次 GET、SSE 彻底断开后重建且不超上限、诊断默认关、离线与待生效同显、POST 响应带 `turnLocked`）；再加 9 项**一致性守则**（版本号与 CHANGELOG 同条、`files` 清单里的文件都在、`lib` 下每个模块都被 `files` 覆盖、当前文案不再出现旧名「极限」、工具描述与宿主档位表同字、skill 状态表同字、**skill 的档位表与宿主 `LEVELS` 同一套**、README 已知边界不再回头写「全局/写死端口」、README 写的测试条数等于实际条数）。
+覆盖：状态默认值、模式/档位合并写、非法值 400、标量与坏 JSON 400、两种老 schema 迁移 + `.bak`、坏 JSON 与未知 schema 不覆写（含「未来 schema 带 tier/forge」也不降级）、字段坏只保留能认的一半、两个工具投影、跨站 Origin 403（读/写/预检/null/子域伪装）、本机 Origin 回显 204、`text/plain` 415、写盘失败 500、SSE 首帧与写入广播（两个订阅者收同一帧）、跨站 SSE 403、四格结构、两套标签、循环格亮起、只提交变化维度、focus 重新对齐、SSE 推送落本地与坏帧容错、`/state` 文案优先、兜底文案与宿主表逐字一致、琥珀样式与隔离线、端口被占时退让到下一个并带 `plugin` 标记、退让日志只报一次就绪且端口正确、`knownSession` 只对本实例有的会话为 true；另有**交互与容错** 9 项（桥不可达时只探一遍端口且 TTL 内不重扫、POST 带回 pending 时不再补 GET、老宿主缺 pending 时补一次 GET、SSE 彻底断开后重建且不超上限、诊断默认关、离线与待生效同显、POST 响应带 `turnLocked`、两套实例时按会话归属切端口、老宿主无 `knownSession` 时不额外扫端口）；再加 9 项**一致性守则**（版本号与 CHANGELOG 同条、`files` 清单里的文件都在、`lib` 下每个模块都被 `files` 覆盖、当前文案不再出现旧名「极限」、工具描述与宿主档位表同字、skill 状态表同字、**skill 的档位表与宿主 `LEVELS` 同一套**、README 已知边界不再回头写「全局/写死端口」、README 写的测试条数等于实际条数）。
 
 CI：`.github/workflows/ci.yml`，推上去后在 Node 22 / 24 上跑 `npm run lint` + `npm test`。本地没有网络通道时以 `npm run verify` 为准。
 
@@ -125,6 +126,7 @@ cmd /c mklink /J "D:\AI\DSH-NEXT\skills\clarify-needs" "%CD%\skill\clarify-needs
 
 - **端口区间全被占**（`43871–43880` 十个都绑不上，例如三套 DSH 同开）时，控件退化为只读（虚线边框 + `!`）：本地点击仍然换档，但**不会同步到宿主**，重启后按宿主里的值走
 - `DSH_CLARIFY_TIER_PORT` 只改宿主**起点**，客户端按同区间探测、认 `plugin` 标记，两端不用手工对齐；要改区间宽度得同时改宿主与客户端的 `PORT_SPAN`
+- **「会话归属」认桥有空窗**：刚开的对话还没被工具写过时，两边都可能回 `knownSession=false`，这时只能先用缓存的端口；本轮的第一次 `clarify_tier` 调用落盘后，切窗口或下一次挂载就会自我纠正
 - **降级后不会自己变回来**：端口全占 / 宿主没起时，控件停在只读（`!`）；恢复靠下一次成功写入、切窗口，或 SSE 重建成功
 - **SSE 重建有上限**（`CONFIG.maxReconnects`，默认 3 次、间隔 2 秒）：连不上就停手，不做无限重试；重建时会顺手作废端口缓存，宿主换了端口也能重新发现
 - 状态文件只有一个（`storages/clarify-tier.json`）：并发写按「最后落盘为准」，没有跨进程锁
