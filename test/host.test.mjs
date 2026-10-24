@@ -64,10 +64,18 @@ test("端口被占时自动退到下一个，并在 /state 带 plugin 标记", a
   assert.equal(s.plugin, "dsh-clarify-tier");
 });
 
-test("knownSession：本实例状态里有这个会话才为 true", async () => {
-  await setSession("s-known", "think", "high");
-  assert.equal((await (await get("s-known")).json()).knownSession, true);
+test("knownSession 只认工具写过的会话（客户端写不算）", async () => {
+  await setSession("s-known", "think", "high"); // 客户端写：不该认领
+  assert.equal((await (await get("s-known")).json()).knownSession, false, "客户端写不应认领实例");
+  await callTool("clarify_tier", "s-known", 3); // 工具写本轮快照：才认领
+  assert.equal((await (await get("s-known")).json()).knownSession, true, "工具写过后才算本实例的会话");
   assert.equal((await (await get("s-not-here")).json()).knownSession, false, "没写过的会话应为 false");
+});
+
+test("工具认领后，客户端再改档不会把 owner 降回去", async () => {
+  await callTool("clarify_tier", "s-keep", 1);
+  await setSession("s-keep", "loop", "max");
+  assert.equal((await (await get("s-keep")).json()).knownSession, true, "owner 只升不降");
 });
 
 test("退让成功时日志只报一次就绪，且报的是真绑上的端口", () => {
