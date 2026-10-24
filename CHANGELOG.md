@@ -1,5 +1,11 @@
 # 变更记录
 
+## 1.9.1 — 2026-10-25
+- **公开文案去掉口语「万一」**：GitHub About、README、使用说明、demo 副标题、`counter-review` 技能里的「万一」统一改成「对抗审查 / 反例句式 / 若…则…」
+- 新增守卫：README、使用说明、demo、两个技能文档里再出现「万一」即测试失败
+- 使用说明（Word）同步重新生成
+- 测试 61 → 62
+
 ## 1.9.0 — 2026-10-24
 - **改名 `dsh-clarify-tier` → `dsh-calibration`**：三种模式（思考/循环/对抗）+ 强度三档，本质是「把用力程度校准到任务」，旧名只覆盖了「需求锚定」一角
 - 一并改：包名 `@local/dsh-calibration`、客户端 bundle id、`/state` 的 `plugin` 标记、cordis 节点 id、状态文件 `storages/calibration.json`、调试文件 `calibration-debug.jsonl`

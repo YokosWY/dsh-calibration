@@ -91,6 +91,20 @@ test("文案统一叫「三模式」：现行文档不再出现「双模式 / �
   assert.match(read("docs", "demo.svg"), /同框三模式/, "demo 标题要写「同框三模式」");
 });
 
+test("公开文案不用口语词「万一」", () => {
+  const files = [
+    ["README.md"],
+    ["docs", "使用说明.md"],
+    ["docs", "demo.svg"],
+    ["skill", "clarify-needs", "SKILL.md"],
+    ["skill", "counter-review", "SKILL.md"],
+    ["skill", "counter-review", "README.md"],
+  ];
+  for (const parts of files) {
+    assert.equal(/万一/.exec(read(...parts)), null, `${parts.join("/")} 仍有口语「万一」`);
+  }
+});
+
 test("counter-review 技能在位，description 合规", () => {
   const text = read("skill", "counter-review", "SKILL.md");
   assert.ok(text.startsWith("---"), "SKILL.md 缺少 frontmatter");
