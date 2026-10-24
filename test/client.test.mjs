@@ -326,3 +326,25 @@ test("老宿主没有 knownSession 字段：不额外扫端口", async () => {
   const probes = env.fetches.filter((f) => f.url.includes("session=s-alpha") && f.url.includes("/state")).length;
   assert.ok(probes <= 2, `不该为认领实例额外扫：${probes}`);
 });
+
+test("暂时谁都不认识本会话：过几秒自动重试，认领后停止轮询", async () => {
+  const later = { mode: "think", level: "max", plugin: "dsh-clarify-tier", knownSession: false };
+  const env = boot(
+    { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false },
+    {
+      stateByPort: {
+        43871: { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false },
+        43872: later,
+      },
+    },
+  );
+  env.mod.__internals.CONFIG.ownerPollMs = 10;
+  env.mod.__internals.CONFIG.ownerPollTries = 8;
+  env.render();
+  await tick(40);
+  assert.equal(env.store.get("dsh-tier-port"), "43871", "未认领时只能先用探测到的端口");
+
+  later.knownSession = true; // 模拟本实例的工具刚刚落盘
+  await tick(80);
+  assert.equal(env.store.get("dsh-tier-port"), "43872", "轮询应认领到正确端口");
+});
