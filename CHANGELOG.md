@@ -9,6 +9,7 @@
 - 技能已 junction 到两套 DSH 的 skills 目录（`D:\AI\DSH-NEXT\skills`、`D:\AI\DSH-official\home\skills`）
 - `loop-forge` 接入：评审后、修之前跑对抗审，报告块加「对抗审」一行
 - 测试 55 → 58（counter 三档取值、COUNTER_PLAN 与 LEVELS 绑定、技能 frontmatter 合规）
+- **命中演练 3/3**：fresh 子代理只看方法+改前状态，对 1.4.2/1.5.0/1.6.0 三个真实事故出 15 条攻击，三个根因全被点到；明细见 `skill/counter-review/docs/method.md`
 
 ## 1.6.1 — 2026-10-24
 - **回退 1.6.0 的语义改动，只保留改名**：第一格的值仍是 `off`（技能退出位：不锚定、不复述、不提问、不标假设），只是滑条上显示为「常规」——即「按常规方式直接做」

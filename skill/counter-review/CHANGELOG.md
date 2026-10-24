@@ -7,4 +7,4 @@
 - 按档位预算：轻量关；交付 ≤3（收敛轮）；极致 ≤5（第 2 轮起）；连续 2 轮零新增 = 泛化收敛
 - 与 `clarify-needs` 分工：动手前审方案 vs 每轮审改动，共用同一套矩阵与判定
 - 开关：`forge_level.counter`（enabled / maxAttacks / scope / onlyFinalRound / fromRound）
-- 命中演练：用 1.4.2 假日志、1.5.0 认领污染、1.6.0 过度设计三个真实翻车做样本（详见 `docs/method.md`）
+- 命中演练：用 1.4.2 假日志、1.5.0 认领污染、1.6.0 过度设计三个真实翻车做样本；首轮 **3/3 命中**、共出 15 条（详见 `docs/method.md` 第三节）
