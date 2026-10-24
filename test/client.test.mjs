@@ -76,6 +76,9 @@ function boot(remote = { mode: "think", level: "high", plugin: "dsh-clarify-tier
       // 按端口返回不同状态：模拟两套 DSH 各有一个桥
       const byPort = options.stateByPort || {};
       const port = Number((target.match(/:(\d+)\//) || [])[1]);
+      if (options.onlyPorts && !options.onlyPorts.includes(port)) {
+        return Promise.reject(new Error("ECONNREFUSED")); // 该端口没有实例在跑
+      }
       const payload = byPort[port] || remote;
       return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...payload }) });
     },
@@ -312,11 +315,13 @@ test("两套 DSH 同开：当前桥不认识本会话时，切到认识它的那
       },
     },
   );
-  env.render();
+  const tree = env.render();
   await tick(80);
   assert.equal(env.store.get("dsh-tier-port"), "43872", "应切到认识本会话的那一端");
-  const last = env.fetches.filter((f) => f.url.includes("/state")).at(-1);
-  assert.match(last.url, /:43872\//, "认领后读写都应走新端口");
+  tree.children[0].props.onClick(); // 认领之后的点击必须走新端口
+  await tick(40);
+  const posts = env.fetches.filter((f) => f.method === "POST");
+  assert.match(posts.at(-1).url, /:43872\//, "认领后写入应走新端口");
 });
 
 test("老宿主没有 knownSession 字段：不额外扫端口", async () => {
@@ -347,4 +352,45 @@ test("暂时谁都不认识本会话：过几秒自动重试，认领后停止�
   later.knownSession = true; // 模拟本实例的工具刚刚落盘
   await tick(80);
   assert.equal(env.store.get("dsh-tier-port"), "43872", "轮询应认领到正确端口");
+});
+
+test("单实例：只有一套 DSH 时不依赖工具落盘，直接认领并写入", async () => {
+  const env = boot(
+    { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false },
+    { onlyPorts: [43871] },
+  );
+  const tree = env.render();
+  await tick(60);
+  tree.children[0].props.onClick();
+  await tick(40);
+  assert.equal(env.posts.length, 1, "单实例应直接认领，不必等工具写");
+  assert.deepEqual(env.posts[0], { level: "off" });
+});
+
+test("两套都不认领：不连 SSE、点击只存本地，认领后补写一次", async () => {
+  const other = { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false };
+  const env = boot(
+    { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false },
+    {
+      onlyPorts: [43871, 43872],
+      stateByPort: {
+        43871: { mode: "think", level: "high", plugin: "dsh-clarify-tier", knownSession: false },
+        43872: other,
+      },
+    },
+  );
+  env.mod.__internals.CONFIG.ownerPollMs = 10;
+  const tree = env.render();
+  await tick(60);
+  assert.equal(env.streams.length, 0, "未认领时不该连任何桥的 SSE");
+
+  tree.children[0].props.onClick();
+  await tick(30);
+  assert.equal(env.posts.length, 0, "未认领时不该写任何实例");
+  assert.deepEqual(JSON.parse(env.store.get("dsh-tier-mode:s-alpha")), { mode: "think", level: "off" }, "改动先存本地");
+
+  other.knownSession = true; // 本实例的工具刚落盘
+  await tick(80);
+  assert.equal(env.posts.length, 1, "认领后应把攒下的改动补写一次");
+  assert.deepEqual(env.posts[0], { level: "off" });
 });
