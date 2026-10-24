@@ -198,9 +198,10 @@ test("兜底文案与宿主表逐字一致", () => {
   assert.deepEqual(FALLBACK_TITLES, TIER_TITLES);
 });
 
-test("样式：循环模式琥珀、隔离线、待生效小点存在", () => {
+test("样式：三色走变量（柔雾调）、隔离线、待生效小点存在", () => {
   const { CSS } = boot().mod.__internals;
-  assert.match(CSS, /data-mode='loop'\] \.dct-cell\[data-on='1'\]\{background:#e08a2e\}/);
+  assert.match(CSS, /--dct-think:#8a82cf;--dct-loop:#6fa47f;--dct-counter:#cc8b8b/);
+  assert.match(CSS, /data-mode='loop'\] \.dct-cell\[data-on='1'\]\{background:var\(--dct-loop\)\}/);
   assert.match(CSS, /\.dct-sep\{/);
   assert.match(CSS, /\.dct-mode\[data-on='1'\]/);
   assert.match(CSS, /data-pending='1'/);
