@@ -2,6 +2,7 @@
   "name": "@local/dsh-clarify-tier",
   "version": "1.8.4",
   "private": true,
+  "author": "YokosWY",
   "type": "module",
   "main": "./lib/index.js",
   "exports": {
