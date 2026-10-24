@@ -19,8 +19,9 @@ blocker.unref();
 const mod = await import("../lib/index.js");
 
 const tools = new Map();
+const logs = [];
 mod.apply({
-  logger: () => ({ info: () => {} }),
+  logger: () => ({ info: (message) => logs.push(String(message)) }),
   tools: { register: (t) => tools.set(t.name, t) },
   effect: () => {},
 });
@@ -61,6 +62,16 @@ const callTool = async (name, session, turn) => tools.get(name).execute(undefine
 test("端口被占时自动退到下一个，并在 /state 带 plugin 标记", async () => {
   const s = await (await get()).json();
   assert.equal(s.plugin, "dsh-clarify-tier");
+});
+
+test("退让成功时日志只报一次就绪，且报的是真绑上的端口", () => {
+  const ready = logs.filter((line) => line.includes("桥接就绪"));
+  assert.equal(ready.length, 1, `「桥接就绪」应只有一条，实际：${ready.join(" | ")}`);
+  assert.ok(ready[0].includes(":43992/state"), `就绪日志应写 43992：${ready[0]}`);
+  assert.ok(
+    !logs.some((line) => line.includes("43991") && line.includes("退化为只读")),
+    "单个端口被占不该说成「控件会退化为只读」",
+  );
 });
 
 test("POST 响应直接带 pending / turnLocked（客户端少发一次 GET）", async () => {
