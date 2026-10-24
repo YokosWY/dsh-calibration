@@ -138,7 +138,7 @@ test("思考模式：3 档 + 1 隔离线 + 1 循环，标签二字", async () =>
   assert.equal(tree.children.length, 5);
   assert.equal(tree.children[3].props.className, "dct-sep");
   const labels = tree.children.slice(0, 3).map((c) => c.children[0]);
-  assert.deepEqual(labels, ["关闭", "严格", "极致"]);
+  assert.deepEqual(labels, ["常规", "严格", "极致"]);
   assert.equal(tree.children[4].children[0], "循环");
 });
 
@@ -175,7 +175,7 @@ test("点档位只提交 level，点循环只提交 mode", async () => {
   const env = boot();
   const tree = env.render();
   await tick();
-  tree.children[0].props.onClick(); // 关闭
+  tree.children[0].props.onClick(); // 常规（值 off）
   await tick();
   assert.deepEqual(env.posts.at(-1), { level: "off" });
   env.render().children[4].props.onClick(); // 循环
