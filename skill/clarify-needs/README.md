@@ -2,8 +2,8 @@
 
 > 动手之前先定档：轻活不打扰，重活问到没有假设。
 > 三档：**off 常规（不锚定）/ high 严格（默认）/ max 极致**；滑条第一格显示「常规」，值是 `off`。
-> **独立项目**：仓库 `dsh-calibration` 的 `skill/clarify-needs/`；不并入 Token-Governance（TG）。
-> **版本**：v5.0，2026-10-23 起独立发布，随 [dsh-calibration](https://github.com/YokosWY/dsh-calibration) 仓库发版。
+> **独立项目**：仓库 `dsh-calibration-tier` 的 `skill/clarify-needs/`；不并入 Token-Governance（TG）。
+> **版本**：v5.0，2026-10-23 起独立发布，随 [dsh-calibration-tier](https://github.com/YokosWY/dsh-calibration-tier) 仓库发版。
 
 - 版本：**v5.0**（三档：删掉 low「常规」，默认升到 high「严格」）
 - 技能名：`clarify-needs`（常驻，模型目录可见）
@@ -70,10 +70,10 @@ cp -r skill/clarify-needs "$DSH_HOME/skills/clarify-needs"
 Windows 也可以直接建 junction（改完源目录即时生效）：
 
 ```powershell
-cmd /c mklink /J "%USERPROFILE%\.dsh\skills\clarify-needs" "D:\path\to\dsh-calibration\skill\clarify-needs"
+cmd /c mklink /J "%USERPROFILE%\.dsh\skills\clarify-needs" "D:\path\to\dsh-calibration-tier\skill\clarify-needs"
 ```
 
-配了 GUI 滑条（插件 [`dsh-calibration`](https://github.com/YokosWY/dsh-calibration)）时，输入框工具行、模型选择左边会有分段条（关闭 / 严格 / 极致，值域 `off/high/max`），模型通过 `clarify_tier` 工具读档位。
+配了 GUI 滑条（插件 [`dsh-calibration-tier`](https://github.com/YokosWY/dsh-calibration-tier)）时，输入框工具行、模型选择左边会有分段条（关闭 / 严格 / 极致，值域 `off/high/max`），模型通过 `clarify_tier` 工具读档位。
 
 装好后模型目录会出现 `clarify-needs`。它是**常驻**技能（每个请求都在上下文里），
 不需要手动触发；要直接切档就说「走 high」「上 max」，说「别问了 / 不用澄清」= off（技能退出）。

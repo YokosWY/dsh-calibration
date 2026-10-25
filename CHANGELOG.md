@@ -1,5 +1,12 @@
 # 变更记录
 
+## 2.0.0 — 2026-10-25
+- **改名 `dsh-calibration` → `dsh-calibration-tier`，简称 CT**：C 承接 `calibration`（把用力程度校准到任务），T 承接 `tier`（一根条上的档位）；第一代 `dsh-clarify-tier` 的缩写同样是 CT，两代名字接上
+- 一并改的对外名字：仓库名、包名 `@local/dsh-calibration-tier`、客户端 bundle id、`cordis.patch.yml` 的 `name`、README / 使用说明 / 演示图 / 安装脚本 / 两个技能文档 / 测试
+- **内部标识一律不动**：cordis 节点 id `calibration`、`/state` 的 `plugin` 标记（`PACKAGE_ID`）、状态文件 `storages/calibration.json`、调试文件 `calibration-debug.jsonl`、端口变量 `DSH_CALIBRATION_PORT`、CSS 前缀 `dct-`、工具名 `clarify_tier` / `forge_level` → 本次**无状态迁移**
+- 升级：本地目录改名后，profile 的 `dependencies` 与 `bundles` 两项换成新包名（`install-profile.ps1` 会处理），重启应用生效
+- 测试 62 项全过
+
 ## 1.9.1 — 2026-10-25
 - **公开文案去掉口语「万一」**：GitHub About、README、使用说明、demo 副标题、`counter-review` 技能里的「万一」统一改成「对抗审查 / 反例句式 / 若…则…」
 - 新增守卫：README、使用说明、demo、两个技能文档里再出现「万一」即测试失败

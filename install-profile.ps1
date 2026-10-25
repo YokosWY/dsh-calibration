@@ -1,4 +1,4 @@
-﻿<#
+<#
   把本插件装进某个 DSH profile（默认 desktop）。
 
   为什么需要它：`desktop` 是 Electron 应用保留的 profile，命令行 `dsh plugin --profile desktop …`
@@ -40,7 +40,7 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 function Say($message) { Write-Host "  $message" }
 function Fail($message) { Write-Host "✗ $message" -ForegroundColor Red; exit 1 }
 
-Write-Host "`n=== dsh-calibration 安装器 ===" -ForegroundColor Cyan
+Write-Host "`n=== dsh-calibration-tier 安装器（CT） ===" -ForegroundColor Cyan
 Say "DSH home     : $DshHome"
 Say "profile      : $Profile"
 Say "插件目录     : $PluginDir"
@@ -60,7 +60,7 @@ if (-not $Uninstall) {
   if (-not $plugin.name) { Fail "插件 package.json 里没有 name" }
   if (-not $plugin.dsh.bundle.patch) { Fail "插件没有声明 dsh.bundle.patch（DSH 需要它来挂进组合包）" }
 }
-$name = if ($Uninstall) { "@local/dsh-calibration" } else { $plugin.name }
+$name = if ($Uninstall) { "@local/dsh-calibration-tier" } else { $plugin.name }
 
 # ── 读 profile 清单 ────────────────────────────────────────────────────────
 $raw = Get-Content $manifestPath -Raw -Encoding utf8

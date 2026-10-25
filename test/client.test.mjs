@@ -120,7 +120,7 @@ function boot(remote = { mode: "think", level: "high", plugin: "dsh-calibration"
 }
 
 test("模块 id 等于包名（防 duplicate factory）", () => {
-  assert.equal(boot().loadedId, "@local/dsh-calibration");
+  assert.equal(boot().loadedId, "@local/dsh-calibration-tier");
 });
 
 test("只注册一条插槽，order=10，槽位正确", () => {

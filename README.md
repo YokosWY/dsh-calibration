@@ -1,10 +1,11 @@
-# dsh-calibration
+# dsh-calibration-tier
 
-[![release](https://img.shields.io/github/v/release/YokosWY/dsh-calibration?color=877be3)](https://github.com/YokosWY/dsh-calibration/releases)
-[![license](https://img.shields.io/github/license/YokosWY/dsh-calibration?color=877be3)](LICENSE)
+[![release](https://img.shields.io/github/v/release/YokosWY/dsh-calibration-tier?color=877be3)](https://github.com/YokosWY/dsh-calibration-tier/releases)
+[![license](https://img.shields.io/github/license/YokosWY/dsh-calibration-tier?color=877be3)](LICENSE)
 [![platform](https://img.shields.io/badge/DSH-web%20client-877be3)](#安装)
 [![node](https://img.shields.io/badge/node-%E2%89%A522-877be3)](package.json)
 
+> **简称 CT**（全名 DSH Calibration Tier）：C 取自 calibration——把用力程度校准到任务；T 取自 tier——一根条上的档位；两代旧名（`dsh-clarify-tier` / `dsh-calibration`）的首字母也都落在这两个词里。
 > 给 DSH 输入框加一条档位条：**一框三模式：思考 / 循环 / 对抗**。思考与循环互斥切换，对抗可叠加在任一种上。
 > `常规 | 严格 | 极致 ‖ 循环 | 对抗`（思考）↔ `轻量 | 交付 | 极致 ‖ 循环亮 | 对抗`（循环）。
 > 拨档或拨开关 → 模型通过 `clarify_tier` / `forge_level` 读到 → 决定开工问多深、交付后磨几轮、要不要额外做对抗审。

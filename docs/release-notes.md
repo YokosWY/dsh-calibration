@@ -3,6 +3,14 @@
 > GitHub Release 直接取用。更早版本（0.1.0–1.1.1）的逐条记录见 `CHANGELOG.md`。
 > 写法约定：只写机制、范围、限制、数字；不写形容词与口号。
 
+## v2.0.0 — 改名 dsh-calibration-tier（简称 CT）
+
+一起改的是**对外名字**：仓库名、包名 `@local/dsh-calibration-tier`、客户端 bundle id、`cordis.patch.yml` 的 `name`、README / 使用说明 / 演示图 / 安装脚本 / 测试里的旧名。
+
+不动的是**内部标识**：cordis 节点 id `calibration`、`/state` 的 `plugin` 标记、状态文件 `storages/calibration.json`、调试文件 `calibration-debug.jsonl`、端口环境变量 `DSH_CALIBRATION_PORT`、CSS 前缀 `dct-`、工具名 `clarify_tier` / `forge_level`。所以这次**没有状态迁移**：已存的档位、已设的端口照常生效。
+
+升级要做的两件事：老仓库地址由 GitHub 301 跳到新地址；本地安装目录改名后，profile 的 `dependencies` 与 `bundles` 里那两项要跟着换成 `@local/dsh-calibration-tier`（`install-profile.ps1` 会处理），然后重启应用。
+
 ## v1.9.1 — 公开文案去掉口语「万一」
 
 仓库 About、README、使用说明、demo 副标题、`counter-review` 技能里的「万一」全部改写成书面说法：对抗审部分统一叫「对抗审查」，技能里的提问模板改成「反例句式 / 若…则…」。
