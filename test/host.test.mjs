@@ -132,7 +132,7 @@ test("空会话用内置默认：think/high，GET 不建文件", async () => {
   assert.equal(s.level, "high");
   assert.equal(s.inherited, true);
   assert.equal(s.pending, false);
-  assert.equal(s.schema, 7);
+  assert.equal(s.schema, 8);
   assert.equal(existsSync(statePath), false);
 });
 
@@ -215,7 +215,7 @@ test("老 schema 5 迁移成 default 会话", async () => {
   assert.equal(s.session, "default");
   assert.equal(s.mode, "loop");
   const disk = JSON.parse(readFileSync(statePath, "utf8"));
-  assert.equal(disk.schema, 7);
+  assert.equal(disk.schema, 8);
   assert.equal(disk.sessions.default.level, "max");
   assert.ok(existsSync(`${statePath}.bak`));
 });
@@ -345,4 +345,92 @@ test("SSE 只推同一会话，帧里带 pending/turnLocked", async () => {
     a.req.destroy();
     b.req.destroy();
   }
+});
+
+test("检索开关：默认关、档位「增量」，/state 带三档与标签", async () => {
+  rmSync(statePath, { force: true });
+  const s = await (await get("s-route-default")).json();
+  assert.deepEqual(s.route, { on: false, level: "high" }, "默认关，档位记「增量」");
+  assert.deepEqual(s.routeLevels, ["off", "high", "max"]);
+  assert.deepEqual(s.labels.route, { off: "本地", high: "增量", max: "全量" });
+  assert.deepEqual(s.defaultRoute, { on: false, level: "high" });
+});
+
+test("检索开关与档位分开写：开/关不动思考档，改档不动开关", async () => {
+  await setSession("s-route-part", "think", "max");
+  let res = await post("s-route-part", { route: { on: true } });
+  assert.equal(res.status, 200);
+  let s = await (await get("s-route-part")).json();
+  assert.deepEqual(s.route, { on: true, level: "high" }, "开检索不影响思考档，档位保持默认增量");
+  assert.equal(s.level, "max", "思考档没被串改");
+
+  await post("s-route-part", { route: { level: "max" } });
+  s = await (await get("s-route-part")).json();
+  assert.deepEqual(s.route, { on: true, level: "max" });
+
+  await post("s-route-part", { route: { on: false } });
+  s = await (await get("s-route-part")).json();
+  assert.deepEqual(s.route, { on: false, level: "max" }, "关掉后档位留着，再开不用重选");
+});
+
+test("检索：非法档位 400 且不落盘", async () => {
+  const before = await (await get("s-route-bad")).json();
+  const res = await post("s-route-bad", { route: { level: "ultra" } });
+  assert.equal(res.status, 400);
+  const after = await (await get("s-route-bad")).json();
+  assert.deepEqual(after.route, before.route);
+});
+
+test("检索：route 不是对象也 400", async () => {
+  const res = await post("s-route-shape", { route: "on" });
+  assert.equal(res.status, 400);
+});
+
+test("检索也吃轮内快照：本轮点了，下一轮才生效", async () => {
+  await setSession("s-route-turn", "think", "high");
+  await post("s-route-turn", { route: { on: false } });
+  let r = await callTool("clarify_tier", "s-route-turn", 21); // 建本轮快照：关
+  assert.equal(r.route.on, false);
+  await post("s-route-turn", { route: { on: true } });
+  r = await callTool("clarify_tier", "s-route-turn", 21);
+  assert.equal(r.route.on, false, "同一轮沿用开工快照");
+  assert.equal(r.pending, true, "本轮有待生效改动");
+  r = await callTool("clarify_tier", "s-route-turn", 22);
+  assert.equal(r.route.on, true, "下一轮生效");
+  assert.equal(r.pending, false);
+});
+
+test("clarify_tier 带检索计划：全量给联网与不设上限的口径，关着不给空表", async () => {
+  await setSession("s-route-tool", "think", "high");
+  await post("s-route-tool", { route: { on: true, level: "max" } });
+  const r = await callTool("clarify_tier", "s-route-tool", 11);
+  assert.equal(r.route.on, true);
+  assert.equal(r.route.label, "全量");
+  assert.equal(r.route.plan.network, true);
+  assert.ok(r.route.plan.reads.includes("不设上限"), r.route.plan.reads);
+  assert.ok(r.text.includes("检索=全量"), r.text);
+
+  await post("s-route-tool", { route: { on: false } });
+  const off = await callTool("clarify_tier", "s-route-tool", 12);
+  assert.equal(off.route.on, false);
+  assert.equal(off.route.plan, null, "关着时不给一张用不上的表");
+  assert.ok(off.text.includes("检索：关"), off.text);
+});
+
+test("v7 状态文件迁移到 v8：补 route 默认并留 .bak", async () => {
+  writeFileSync(
+    statePath,
+    JSON.stringify({
+      schema: 7,
+      sessions: { default: { mode: "loop", level: "max", counter: true, updatedAt: "2026-10-20T00:00:00.000Z" } },
+    }),
+    "utf8",
+  );
+  const s = await (await get()).json();
+  assert.deepEqual(s.route, { on: false, level: "high" });
+  const disk = JSON.parse(readFileSync(statePath, "utf8"));
+  assert.equal(disk.schema, 8);
+  assert.deepEqual(disk.sessions.default.route, { on: false, level: "high" });
+  assert.ok(existsSync(`${statePath}.bak`), "迁移前要留 .bak");
+  assert.equal(disk.sessions.default.counter, true, "老字段不能被迁移弄丢");
 });

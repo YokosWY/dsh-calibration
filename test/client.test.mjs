@@ -141,16 +141,19 @@ test("悬停解释已移除：档位格与两个开关都不带 title", async ()
   assert.equal("title" in tree.props, false, "根节点还带 title");
 });
 
-test("思考模式：3 档 + 2 隔离线 + 循环 + 对抗，标签二字", async () => {
+test("思考模式：3 档 + 3 隔离线 + 循环 + 对抗 + 检索，标签二字", async () => {
   const tree = boot().render();
   await tick();
   assert.equal(tree.props["data-mode"], "think");
-  assert.equal(tree.children.length, 7, "3 档 + 隔离线 + 循环 + 隔离线 + 对抗");
+  assert.equal(tree.children.length, 9, "3 档 + 隔离线 + 循环 + 隔离线 + 对抗 + 隔离线 + 检索");
   assert.equal(tree.children[3].props.className, "dct-sep");
   assert.equal(tree.children[5].props.className, "dct-sep");
+  assert.equal(tree.children[7].props.className, "dct-sep");
   const labels = tree.children.slice(0, 3).map((c) => c.children[0]);
   assert.deepEqual(labels, ["常规", "严格", "极致"]);
   assert.equal(tree.children[4].children[0], "循环");
+  assert.equal(tree.children[6].children[0], "对抗");
+  assert.equal(tree.children[8].children[0], "检索");
 });
 
 test("循环模式：标签换成循环档，循环格亮起", async () => {
@@ -178,7 +181,12 @@ test("用 SSE 接收其他窗口的改动并落本地", async () => {
   assert.equal(env.streams.length, 1, "应建立一条 SSE 连接");
   assert.match(env.streams[0].url, /\/events\?session=s-alpha$/);
   env.streams[0].onmessage({ data: JSON.stringify({ mode: "loop", level: "max" }) });
-  assert.deepEqual(JSON.parse(env.store.get("dsh-tier-mode:s-alpha")), { mode: "loop", level: "max", counter: false });
+  assert.deepEqual(JSON.parse(env.store.get("dsh-tier-mode:s-alpha")), {
+    mode: "loop",
+    level: "max",
+    counter: false,
+    route: { on: false, level: "high" },
+  });
   env.streams[0].onmessage({ data: "{bad" }); // 坏帧不许抛
 });
 
@@ -453,10 +461,103 @@ test("两套都不认领：不连 SSE、点击只存本地，认领后补写一�
   tree.children[0].props.onClick();
   await tick(30);
   assert.equal(env.posts.length, 0, "未认领时不该写任何实例");
-  assert.deepEqual(JSON.parse(env.store.get("dsh-tier-mode:s-alpha")), { mode: "think", level: "off", counter: false }, "改动先存本地");
+  assert.deepEqual(
+    JSON.parse(env.store.get("dsh-tier-mode:s-alpha")),
+    { mode: "think", level: "off", counter: false, route: { on: false, level: "high" } },
+    "改动先存本地",
+  );
 
   other.knownSession = true; // 本实例的工具刚落盘
   await tick(80);
   assert.equal(env.posts.length, 1, "认领后应把攒下的改动补写一次");
   assert.deepEqual(env.posts[0], { level: "off" });
+});
+
+test("检索关闭：不渲染检索三格，主条仍是 3 档 + 三开关", async () => {
+  const tree = boot().render();
+  await tick();
+  assert.equal(tree.props["data-route"], "0");
+  const routeCells = tree.children.filter((c) => String((c.props && c.props.className) || "").includes("dct-routecell"));
+  assert.equal(routeCells.length, 0);
+});
+
+test("检索开启：最左三格是 本地/增量/全量，与思考档并存", async () => {
+  const env = boot();
+  env.store.set(
+    "dsh-tier-mode:s-alpha",
+    JSON.stringify({ mode: "think", level: "max", route: { on: true, level: "high" } }),
+  );
+  const tree = env.render();
+  await tick();
+  assert.equal(tree.props["data-route"], "1");
+  assert.equal(tree.props["data-route-level"], "high");
+  assert.equal(tree.children.length, 13, "3 检索档 + 隔离线 + 3 思考档 + 隔离线 + 循环 + 隔离线 + 对抗 + 隔离线 + 检索");
+  assert.deepEqual(
+    tree.children.slice(0, 3).map((c) => c.children[0]),
+    ["本地", "增量", "全量"],
+  );
+  assert.equal(tree.children[3].props.className, "dct-sep");
+  assert.deepEqual(
+    tree.children.slice(4, 7).map((c) => c.children[0]),
+    ["常规", "严格", "极致"],
+    "检索开着也必须能改思考档",
+  );
+  assert.equal(tree.children[12].children[0], "检索");
+  assert.equal(tree.children[12].props["data-route-toggle"], "on");
+});
+
+test("点检索只提交 route.on，点全量只提交 route.level", async () => {
+  const env = boot();
+  const tree = env.render();
+  await tick();
+  tree.children[8].props.onClick(); // 检索开关
+  await tick();
+  assert.deepEqual(env.posts.at(-1), { route: { on: true } }, "切开关不许顺手改档位/模式");
+
+  env.store.set(
+    "dsh-tier-mode:s-alpha",
+    JSON.stringify({ mode: "think", level: "high", route: { on: true, level: "high" } }),
+  );
+  const onTree = env.render();
+  await tick();
+  onTree.children[2].props.onClick(); // 全量
+  await tick();
+  assert.deepEqual(env.posts.at(-1), { route: { level: "max" } }, "换档不许顺手切换开关");
+});
+
+test("检索 + 循环 + 对抗同开：四段各亮各的，data-route 与 data-mix 互不干扰", async () => {
+  const env = boot();
+  env.store.set(
+    "dsh-tier-mode:s-alpha",
+    JSON.stringify({ mode: "loop", level: "max", counter: true, route: { on: true, level: "max" } }),
+  );
+  const tree = env.render();
+  await tick();
+  assert.equal(tree.props["data-mode"], "loop");
+  assert.equal(tree.props["data-route"], "1");
+  assert.equal(tree.props["data-mix"], "1");
+  assert.equal(tree.children.length, 13);
+  assert.equal(tree.children[2].props["data-on"], "1", "全量档亮");
+  assert.equal(tree.children[8].props["data-mode-toggle"], "loop");
+  assert.equal(tree.children[10].props["data-counter-toggle"], "on");
+  assert.equal(tree.children[12].props["data-route-toggle"], "on");
+});
+
+test("检索档位坏值退回默认「增量」", async () => {
+  const env = boot();
+  env.store.set(
+    "dsh-tier-mode:s-alpha",
+    JSON.stringify({ mode: "think", level: "high", route: { on: true, level: "ultra" } }),
+  );
+  const tree = env.render();
+  await tick();
+  assert.equal(tree.props["data-route-level"], "high");
+});
+
+test("样式：天蓝变量只定义一次，且只打在检索格与检索开关上", () => {
+  const { CSS } = boot().mod.__internals;
+  assert.equal((CSS.match(/--dct-route:/g) || []).length, 1, "变量只能定义一次");
+  assert.ok(CSS.includes("#3a9ad9"), "天蓝取 #3a9ad9");
+  assert.ok(CSS.includes(".dct-routecell[data-on='1']{background:var(--dct-route)"), "检索格用天蓝");
+  assert.ok(CSS.includes(".dct-route-toggle[data-on='1']{background:var(--dct-route)"), "检索开关用天蓝");
 });

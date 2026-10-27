@@ -6,7 +6,7 @@ import assert from "node:assert";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { LEVELS, counterPlan, COUNTER_ATTACKS } from "../lib/core.js";
+import { LEVELS, ROUTE_LEVELS, ROUTE_PLAN, LABELS, TITLES, DEFAULT_ROUTE, counterPlan, COUNTER_ATTACKS, routePlan } from "../lib/core.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -75,9 +75,9 @@ test("对抗审：默认关、开之后密度随档位、scope 随模式", () =>
   assert.deepEqual(counterPlan("loop", "max", true), { enabled: true, maxAttacks: 5, scope: "round-changes" });
 });
 
-test("文案统一叫「三模式」：现行文档不再出现「双模式 / 两个模式」", () => {
+test("文案统一叫「四模式」：现行文档不再出现「双模式 / 两个模式 / 三模式」", () => {
   const readme = read("README.md");
-  assert.match(readme, /三模式/, "README 必须明确写「三模式」");
+  assert.match(readme, /四模式/, "README 必须明确写「四模式」");
   const files = [
     ["README.md"],
     ["skill", "clarify-needs", "SKILL.md"],
@@ -86,9 +86,32 @@ test("文案统一叫「三模式」：现行文档不再出现「双模式 / �
   ];
   for (const parts of files) {
     const text = read(...parts);
-    assert.equal(/双模式|两个模式/.exec(text), null, `${parts.join("/")} 仍在用旧说法`);
+    assert.equal(/双模式|两个模式|三模式/.exec(text), null, `${parts.join("/")} 仍在用旧说法`);
   }
-  assert.match(read("docs", "demo.svg"), /同框三模式/, "demo 标题要写「同框三模式」");
+  assert.match(read("docs", "demo.svg"), /同框四模式/, "demo 标题要写「同框四模式」");
+});
+
+test("检索三档：标签、说明、执行计划三张表与 ROUTE_LEVELS 同键", () => {
+  assert.deepEqual(Object.keys(LABELS.route).sort(), [...ROUTE_LEVELS].sort(), "LABELS.route 的键必须与 ROUTE_LEVELS 一致");
+  assert.deepEqual(Object.keys(TITLES.route).sort(), [...ROUTE_LEVELS].sort(), "TITLES.route 的键必须与 ROUTE_LEVELS 一致");
+  assert.deepEqual(Object.keys(ROUTE_PLAN).sort(), [...ROUTE_LEVELS].sort(), "ROUTE_PLAN 的键必须与 ROUTE_LEVELS 一致");
+  assert.equal(ROUTE_PLAN.off.network, false, "本地档不许联网");
+  assert.equal(ROUTE_PLAN.high.network, true);
+  assert.equal(ROUTE_PLAN.max.network, true);
+  // 全量不设读取上限（用户口径 2026-10-27），降本靠「只跑首轮」而不是砍读取
+  assert.ok(ROUTE_PLAN.max.reads.includes("不设上限"), ROUTE_PLAN.max.reads);
+  assert.ok(ROUTE_PLAN.max.guard.includes("只跑首轮"), ROUTE_PLAN.max.guard);
+});
+
+test("检索开关默认关、默认档位「增量」，关着时不发空计划", () => {
+  assert.deepEqual(DEFAULT_ROUTE, { on: false, level: "high" });
+  const off = routePlan(false, "max");
+  assert.equal(off.on, false);
+  assert.equal(off.plan, null, "关着时 plan 必须是 null");
+  assert.equal(off.label, "全量", "关着也带档位名，客户端不用另算");
+  const on = routePlan(true, "max");
+  assert.equal(on.plan, ROUTE_PLAN.max);
+  assert.equal(on.label, "全量");
 });
 
 test("公开文案不用口语词「万一」", () => {
