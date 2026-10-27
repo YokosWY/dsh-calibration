@@ -66,9 +66,10 @@
 ```
 
 - **会话键**：客户端用插槽 inject 给的 `sessionId`，经 `?session=` 传给桥；工具用 `exec.agent.session.id`，读不到才落 `default`
-- `clarify_tier`：思考模式返回 `level` + `counter`；循环模式返回 `off`（不叠加锚定）+ `counter`；两种模式都返回 `route`（开关 + 档位 + 执行口径，关着时 `plan=null`）
+- `clarify_tier`：两种模式都返回 `tier` + `think`（思考强度：常规 0 / 严格 2 / 极致 3，含 `probes / axes / reverse` 三张清单与提问口径）+ `counter` + `route`（开关 + 档位 + 执行口径，关着时 `plan=null`）；循环模式另带 `forge` 信息
 - `counter` = 对抗开关：`{ enabled, maxAttacks, scope }`，密度随档位（常规/严格 3 条、极致 5 条），`scope` 思考为 `plan+delivery`、循环为 `round-changes`
-- `forge_level`：思考模式返回 `off`；循环模式把 `off/high/max` 映射成 `lite/high/max` 与 3/5/8 轮；同样带 `counter`
+- `forge_level`：思考模式返回 `off`；循环模式把 `off/high/max` 映射成 `lite/high/max` 与 3/5/8 轮；同样带 `think` 与 `counter`
+- **思考强度（v2.3.0）**：档位不只报名字，还给出「怎么想」——歧义点（问不问的判据，严格 2 / 极致 3）、覆盖轴（全面性，3 / 6）、逆向（pre-mortem / 反证 / 反例，1 / 3）；循环模式同档位映射，不再退回 `off`
 - **每轮快照**：一条用户消息 = 一轮（轮号取 `agent.phase.turn`）。开工第一次调工具时，把当时的设置记成本轮快照（`turn{id,mode,level,counter,route}`）；本轮内再点档位条只改「下轮的值」，条尾显示一个循环色小点（`pending`）
 - 下一轮开工自动换用新值；取不到轮 id 时退回实时值（不做轮内保护，但功能不坏）
 - 没单独设置过的对话，继承 `default` 会话（迁移自 0.6 的全局值），再没有就用内置 `think/high`
@@ -120,7 +121,7 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 ## 测试
 
 ```bash
-npm test        # node --test，83 项，约 5 秒
+npm test        # node --test，86 项，约 5 秒
 npm run lint    # scripts/check.mjs：lib 下所有模块 + 所有测试逐个 node --check
 npm run verify  # lint + test，本地 CI 就用这条
 ```
@@ -177,7 +178,8 @@ cmd /c mklink /J "D:\AI\DSH-NEXT\skills\counter-review" "%CD%\skill\counter-revi
 - **SSE 重建有上限**（`CONFIG.maxReconnects`，默认 3 次、间隔 2 秒）：连不上就停手，不做无限重试；重建时会顺手作废端口缓存，宿主换了端口也能重新发现
 - 状态文件只有一个（`storages/calibration.json`）：并发写按「最后落盘为准」，没有跨进程锁
 - 工具返回的是调用时刻的值；中途改档要再调一次
-- 循环模式不叠加思考档：需要强提问就先退回思考模式；但「对抗」在思考/循环两种强度模式下都能叠加，不冲突
+- 循环模式也返回思考强度（同档位映射：轻量 = 常规、交付 = 严格、极致 = 极致）；「对抗」在两种模式下都能叠加，不冲突
+- 思考强度是「清单」不是「开关」：工具只负责把歧义点 / 覆盖轴 / 逆向发下来，真按不按看模型执行；要更硬的约束就往上加档或开对抗
 - 多窗口实时同步：SSE 推送，同一对话两窗同时改动以最后落盘为准；SSE 不可用时退回「切窗口重新对齐」
 - 快照是**按轮**的：只影响「我这一轮用什么」，不改你拨出来的值；别的对话互不影响
 - **诊断默认关**：启动时不再往宿主写 `calibration-debug.jsonl`（那个文件不轮转，会一直长）。要抓注册链路时在控制台执行 `localStorage.setItem("dsh-tier-debug","1")` 再刷新，用完删掉这个键

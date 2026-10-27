@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-calibration-tier",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "private": true,
   "author": "YokosWY",
   "type": "module",

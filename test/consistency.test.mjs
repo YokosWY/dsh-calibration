@@ -6,7 +6,7 @@ import assert from "node:assert";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { LEVELS, ROUTE_LEVELS, ROUTE_PLAN, LABELS, TITLES, DEFAULT_ROUTE, counterPlan, COUNTER_ATTACKS, routePlan } from "../lib/core.js";
+import { LEVELS, ROUTE_LEVELS, ROUTE_PLAN, LABELS, TITLES, DEFAULT_ROUTE, counterPlan, COUNTER_ATTACKS, routePlan, THINK_PLAN, THINK_LEVELS, thinkPlan } from "../lib/core.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -172,4 +172,33 @@ test("发布清单在位，且 release-notes 首节就是当前版本", () => {
   assert.ok(first, "release-notes 里找不到版本标题");
   assert.equal(first[1], `v${pkg.version}`, "release-notes 首节版本与 package.json 不一致");
   assert.deepEqual(pkg.files.includes("docs"), true, "files 清单要带 docs，否则 npm 包里没有发布清单");
+});
+
+test("思考强度按档位分配：常规 0、严格 2/3/1、极致 3/6/3", () => {
+  const counts = (l) => {
+    const p = THINK_PLAN[l];
+    return [p.probes.length, p.axes.length, p.reverse.length];
+  };
+  assert.deepEqual(THINK_LEVELS, ["off", "high", "max"]);
+  assert.deepEqual(counts("off"), [0, 0, 0], "常规不问、不列轴");
+  assert.deepEqual(counts("high"), [2, 3, 1], "严格：2 歧义点 / 3 覆盖轴 / 1 逆向");
+  assert.deepEqual(counts("max"), [3, 6, 3], "极致：3 歧义点 / 6 覆盖轴 / 3 逆向");
+  assert.equal(THINK_PLAN.off.confirm, 0);
+  assert.equal(THINK_PLAN.high.confirm, 2);
+  assert.equal(THINK_PLAN.max.confirm, 3);
+});
+
+test("循环模式不再短路思考强度：同档位映射，来源标 loop", () => {
+  for (const l of THINK_LEVELS) {
+    const think = thinkPlan("think", l);
+    const loop = thinkPlan("loop", l);
+    assert.equal(loop.level, think.level);
+    assert.equal(loop.intensity, think.intensity);
+    assert.equal(loop.text, think.text);
+    assert.equal(think.source, "think");
+    assert.equal(loop.source, "loop");
+  }
+  assert.equal(thinkPlan("loop", "bogus").level, "high", "非法档位落回 high");
+  assert.equal(thinkPlan("think", "max").reverse.length, 3, "极致要带三条逆向");
+  assert.equal(/不叠加思考档/.exec(read("lib", "tools.js")), null, "工具文案里不许再写「不叠加思考档」");
 });

@@ -434,3 +434,20 @@ test("v7 状态文件迁移到 v8：补 route 默认并留 .bak", async () => {
   assert.ok(existsSync(`${statePath}.bak`), "迁移前要留 .bak");
   assert.equal(disk.sessions.default.counter, true, "老字段不能被迁移弄丢");
 });
+
+test("循环模式也返回思考强度：tier 不再恒为 off，think 与档位同源", async () => {
+  await setSession("s-think-loop", "loop", "max");
+  let r = await callTool("clarify_tier", "s-think-loop", 31);
+  assert.equal(r.mode, "loop");
+  assert.equal(r.tier, "max", "循环档的 tier 就是同档位映射，不再是 off");
+  assert.equal(r.think.level, "max");
+  assert.equal(r.think.intensity, 3);
+  assert.equal(r.think.probes.length, 3);
+  assert.ok(r.text.includes("思考强度"), r.text);
+
+  await setSession("s-think-loop", "think", "max");
+  r = await callTool("clarify_tier", "s-think-loop", 32);
+  assert.equal(r.think.source, "think");
+  assert.equal(r.think.axes.length, 6, "极致要列满 6 条覆盖轴");
+  assert.ok(r.text.includes("思考档位"), r.text);
+});
