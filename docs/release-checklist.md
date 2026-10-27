@@ -11,7 +11,7 @@
 | GitHub Topics | 本文件 §三 的列表 | 人工/API |
 | README 头部、四模式图 | `README.md` | 一致性测试 |
 | 演示图 | `docs/demo.svg`（`docs/demo.png` 由它重渲染） | 测试守 svg 标题，png 需重出 |
-| 使用说明 | `docs/使用说明.md` → `docs/使用说明.docx` | 人工（Word 要重新生成） |
+| 使用说明 | `docs/使用说明.md` → `docs/使用说明.docx`（`python docs/tools/build-usage-docx.py`，需 python-docx） | 人工跑脚本，跑完看 `git status` 里 docx 是否变化 |
 | Release 正文 | `docs/release-notes.md` 里该版本那一节 | 测试守「首节 = 当前版本」 |
 | 版本号 | `package.json` ↔ `CHANGELOG.md` 首条 | 一致性测试 |
 | tag / GitHub Release | 与 `release-notes` 该节同名同文 | 人工 |
