@@ -120,10 +120,12 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 ## 测试
 
 ```bash
-npm test        # node --test，81 项，约 5 秒
+npm test        # node --test，83 项，约 5 秒
 npm run lint    # scripts/check.mjs：lib 下所有模块 + 所有测试逐个 node --check
 npm run verify  # lint + test，本地 CI 就用这条
 ```
+
+发版走 `docs/release-checklist.md` 那张表：GitHub About 与 Topics 也算发布面，About 逐字取 `package.json` 的 `description`（离线测试只能守 description 的措辞，About 本身要人工/API 同步）。
 
 覆盖（按类，不按条数）：
 

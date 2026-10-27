@@ -157,3 +157,19 @@ test("README 写的测试条数跟实际一致", () => {
   }
   assert.equal(claimed, actual, `README 写 ${claimed} 项，实际 ${actual} 项`);
 });
+
+test("GitHub About 的源：package.json description 必须写「四模式」且列全四种", () => {
+  // About 只存在仓库设置里，离线测试碰不到；能守的是它的唯一事实源（description 逐字复制到 About）
+  assert.match(pkg.description, /四模式/, "description 还停在旧的「三模式」说法");
+  for (const w of ["思考", "循环", "对抗", "检索"]) {
+    assert.ok(pkg.description.includes(w), `description 缺「${w}」`);
+  }
+});
+
+test("发布清单在位，且 release-notes 首节就是当前版本", () => {
+  assert.ok(existsSync(join(root, "docs", "release-checklist.md")), "缺少 docs/release-checklist.md");
+  const first = read("docs", "release-notes.md").match(/^## (v\d+\.\d+\.\d+)/m);
+  assert.ok(first, "release-notes 里找不到版本标题");
+  assert.equal(first[1], `v${pkg.version}`, "release-notes 首节版本与 package.json 不一致");
+  assert.deepEqual(pkg.files.includes("docs"), true, "files 清单要带 docs，否则 npm 包里没有发布清单");
+});
