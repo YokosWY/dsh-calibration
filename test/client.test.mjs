@@ -219,6 +219,48 @@ test("样式：三色走变量（柔雾调）、隔离线、待生效小点存�
   assert.match(CSS, /\.dct-counter\[data-on='1'\]\{background:var\(--dct-counter\)/);
 });
 
+test("样式：循环 + 对抗 同开的雾橙也只定义一次，且只打在三级条的选中格上", () => {
+  const { CSS } = boot().mod.__internals;
+  assert.match(CSS, /--dct-mix:#cf8a4a/, "雾橙要跟三色一样收在变量里");
+  assert.match(
+    CSS,
+    /data-mix='1'\] \.dct-cell\[data-level\]\[data-on='1'\]\{background:var\(--dct-mix\)\}/,
+    "选中那一格要实心橙",
+  );
+  assert.equal(/data-mix='1'\][^{]*\.dct-mode/.exec(CSS), null, "循环开关不许跟着变橙");
+  assert.equal(/data-mix='1'\][^{]*\.dct-counter/.exec(CSS), null, "对抗开关不许跟着变橙");
+});
+
+test("循环 + 对抗 同开：根节点 data-mix=1，两个开关各留原色", async () => {
+  const env = boot();
+  env.store.set("dsh-tier-mode:s-alpha", JSON.stringify({ mode: "loop", level: "max", counter: true }));
+  const tree = env.render();
+  await tick();
+  assert.equal(tree.props["data-mode"], "loop");
+  assert.equal(tree.props["data-counter"], "1");
+  assert.equal(tree.props["data-mix"], "1");
+  assert.deepEqual(
+    tree.children.slice(0, 3).map((c) => c.props["data-level"]),
+    ["off", "high", "max"],
+    "橙色规则认 data-level 这一组",
+  );
+  assert.equal(tree.children[4].props.className, "dct-cell dct-mode", "循环格不参与染色");
+  assert.equal(tree.children[6].props.className, "dct-cell dct-counter", "对抗格不参与染色");
+});
+
+test("只有循环 + 对抗 同时亮才转橙：单独循环、单独对抗、都不开都是 0", async () => {
+  const cases = [
+    [{ mode: "loop", level: "high", counter: false }, "0"],
+    [{ mode: "think", level: "high", counter: true }, "0"],
+    [{ mode: "think", level: "high", counter: false }, "0"],
+  ];
+  for (const [value, expected] of cases) {
+    const env = boot();
+    env.store.set("dsh-tier-mode:s-alpha", JSON.stringify(value));
+    assert.equal(env.render().props["data-mix"], expected, JSON.stringify(value));
+  }
+});
+
 test("会话隔离：不同对话各存各的键，桥地址带 session", async () => {
   const env = boot();
   const a = env.render("s-alpha");

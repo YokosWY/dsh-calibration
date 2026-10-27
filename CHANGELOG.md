@@ -1,5 +1,14 @@
 # 变更记录
 
+## 2.1.0 — 2026-10-27
+- **循环 + 对抗 同开时，等级条的选中格转橙**：`--dct-mix:#cf8a4a`，只在 `data-mix="1"`（`mode=loop` 且 `counter=true`）时生效；循环开关保持绿、对抗开关保持红，只有左边等级格换色，所以「边磨边审」这个组合状态一眼可辨
+- 橙色是手工取的暖橙，不是两色数值平均：`#66ae7c` 与 `#da7f7f` 平均得土黄 `#a0967d`（既不橙也发灰），取同亮度、同饱和度的橙才既像橙又不至于成为整条最亮的一格
+- 新增根属性 `data-mix`，CSS 只认这一位；「下一轮生效」小点在同开时也用橙色
+- 新增守卫：橙只落在 `[data-level][data-on='1']`，`.dct-mode` / `.dct-counter` 不许跟着变色；单独循环、单独对抗、都不开时 `data-mix="0"`
+- `demo.svg` 循环行同步转橙并加一行图例；`docs/demo.png` 按新图重渲染（旧 PNG 还停在 1.9 的旧名与绿条）；README / 使用说明（Markdown + Word）/ 发布说明同步
+- 纯前端样式：状态文件、`/state` 字段、`clarify_tier` 与 `forge_level` 的返回值都不变
+- 测试 62 → 65
+
 ## 2.0.0 — 2026-10-25
 - **改名 `dsh-calibration` → `dsh-calibration-tier`，简称 CT**：C 承接 `calibration`（把用力程度校准到任务），T 承接 `tier`（一根条上的档位）；第一代 `dsh-clarify-tier` 的缩写同样是 CT，两代名字接上
 - 一并改的对外名字：仓库名、包名 `@local/dsh-calibration-tier`、客户端 bundle id、`cordis.patch.yml` 的 `name`、README / 使用说明 / 演示图 / 安装脚本 / 两个技能文档 / 测试
