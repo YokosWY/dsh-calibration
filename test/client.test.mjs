@@ -220,11 +220,29 @@ test("兜底文案与宿主表逐字一致", () => {
 test("样式：三色走变量（柔雾调）、隔离线、待生效小点存在", () => {
   const { CSS } = boot().mod.__internals;
   assert.match(CSS, /--dct-think:#877be3;--dct-loop:#66ae7c;--dct-counter:#da7f7f/);
-  assert.match(CSS, /data-mode='loop'\] \.dct-cell\[data-on='1'\]:not\(\.dct-counter\)\{background:var\(--dct-loop\)\}/);
+  assert.match(CSS, /data-mode='loop'\] \.dct-cell\[data-level\]\[data-on='1'\]\{background:var\(--dct-loop\)\}/);
   assert.match(CSS, /\.dct-sep\{/);
-  assert.match(CSS, /\.dct-mode\[data-on='1'\]/);
+  assert.match(
+    CSS,
+    /\.dct-root \.dct-cell\.dct-mode\[data-on='1'\]\{background:var\(--dct-loop\)/,
+    "循环格自带绿，且 0,4,0 稳压 .dct-cell[data-on='1'] 的 0,3,0（不依赖源序）",
+  );
   assert.match(CSS, /data-pending='1'/);
   assert.match(CSS, /\.dct-counter\[data-on='1'\]\{background:var\(--dct-counter\)/);
+});
+
+test("样式：循环只换三级条，检索恒天蓝、对抗恒红", () => {
+  const { CSS } = boot().mod.__internals;
+  // 循环的换色段里不许出现检索格/检索开关与对抗开关（2.2.1 修的就是这条）
+  assert.equal(/data-mode='loop'\][^{]*\.dct-route/.exec(CSS), null, "循环下检索不许换色");
+  assert.equal(/data-mode='loop'\][^{]*\.dct-counter/.exec(CSS), null, "循环下对抗不许换色");
+  assert.equal(
+    /data-mode='loop'\] \.dct-cell\[data-on='1'\]/.exec(CSS),
+    null,
+    "循环规则不许再写通用 .dct-cell[data-on='1']（特异性 0,5,0 会压过检索的 0,3,0）",
+  );
+  assert.match(CSS, /\.dct-routecell\[data-on='1'\]\{background:var\(--dct-route\)/, "检索格用天蓝");
+  assert.match(CSS, /\.dct-route-toggle\[data-on='1'\]\{background:var\(--dct-route\)/, "检索开关用天蓝");
 });
 
 test("样式：循环 + 对抗 同开的雾橙也只定义一次，且只打在三级条的选中格上", () => {
