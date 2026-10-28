@@ -7,7 +7,7 @@
   ```
   `false` 摘掉内置项、`true` 加新渠道；名单按文件 `mtime+size` 缓存失效，改完下一个请求就生效（与 `models` 覆盖同一份文件）。单项 `free` 仍优先于名单。
 - **为什么不做自动识别**：宿主 `llm` 只暴露 `LlmProviderInfo { id, name }` 与 `LlmModelInfo { provider, id, name, description?, inputModalities? }`，**没有任何价格/免费元数据**（已核 `app.asar` 内的类型声明），所以「谁免费」只能靠名单 + 人工覆盖。
-- 测试 132 → 133（新增：providers 增删生效、删配置回落默认、scoreRoute 跟随名单）。
+- 测试 132 → 134（新增：providers 增删生效、删配置回落默认；另一条是 **`使用说明.docx` 与 md 同版本守卫**——Word 版曾连续两版忘了重生成，纯 node 解 zip 读 `word/document.xml`，不引依赖）。
 
 ## 3.2.3 — 2026-10-28
 - **修：免费线在同分时抢走自动挑模型**。实测 `state.agent.profile = efficiency` 时自动挑到 `buddy/deepseek-v4-flash`（`dsh-our-free-model` 的 WorkBuddy 免费线），子代理启动成功、运行期静默失败（无收尾消息）。根因不是能力分，而是同族同分（`deepseek-v4-flash` 与官方同分 8）时按 `provider:model` 字典序，`buddy` 排在最前。

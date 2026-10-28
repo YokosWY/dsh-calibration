@@ -4,6 +4,7 @@
 import test from "node:test";
 import assert from "node:assert";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { inflateRawSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { LEVELS, ROUTE_LEVELS, ROUTE_PLAN, LABELS, TITLES, DEFAULT_ROUTE, counterPlan, COUNTER_ATTACKS, routePlan, THINK_PLAN, THINK_LEVELS, thinkPlan, AGENT_PROFILES, AGENT_PLAN, DEFAULT_AGENT, agentPlan } from "../lib/core.js";
@@ -238,4 +239,51 @@ test("循环模式不再短路思考强度：同档位映射，来源标 loop", 
   assert.equal(thinkPlan("loop", "bogus").level, "high", "非法档位落回 high");
   assert.equal(thinkPlan("think", "max").reverse.length, 3, "极致要带三条逆向");
   assert.equal(/不叠加思考档/.exec(read("lib", "tools.js")), null, "工具文案里不许再写「不叠加思考档」");
+});
+
+/** 从 docx（zip）里取出 word/document.xml 的文本，纯 node 实现，不引依赖。 */
+function docxText(...p) {
+  const buf = readFileSync(join(root, ...p));
+  let eocd = -1;
+  for (let i = buf.length - 22; i >= 0 && i >= buf.length - 66000; i--) {
+    if (buf.readUInt32LE(i) === 0x06054b50) {
+      eocd = i;
+      break;
+    }
+  }
+  assert.ok(eocd >= 0, `${p.join("/")} 不是 zip/docx`);
+  const count = buf.readUInt16LE(eocd + 10);
+  let off = buf.readUInt32LE(eocd + 16);
+  for (let n = 0; n < count; n++) {
+    assert.equal(buf.readUInt32LE(off), 0x02014b50, "zip 中央目录损坏");
+    const method = buf.readUInt16LE(off + 10);
+    const csize = buf.readUInt32LE(off + 20);
+    const nameLen = buf.readUInt16LE(off + 28);
+    const extraLen = buf.readUInt16LE(off + 30);
+    const commentLen = buf.readUInt16LE(off + 32);
+    const localOff = buf.readUInt32LE(off + 42);
+    const name = buf.subarray(off + 46, off + 46 + nameLen).toString("utf8");
+    if (name === "word/document.xml") {
+      const lNameLen = buf.readUInt16LE(localOff + 26);
+      const lExtraLen = buf.readUInt16LE(localOff + 28);
+      const start = localOff + 30 + lNameLen + lExtraLen;
+      const data = buf.subarray(start, start + csize);
+      const xml = method === 0 ? data.toString("utf8") : inflateRawSync(data).toString("utf8");
+      return xml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    }
+    off += 46 + nameLen + extraLen + commentLen;
+  }
+  assert.fail("docx 里找不到 word/document.xml");
+}
+
+test("使用说明.docx 与 md 同版本（Word 版曾连续两版忘了重生成）", () => {
+  const md = read("docs", "使用说明.md");
+  const claimed = md.match(/版本：(\d+\.\d+\.\d+)/);
+  assert.ok(claimed, "md 里要有「版本：x.y.z」");
+  assert.equal(claimed[1], pkg.version, "md 版本要跟 package.json 一致");
+  const text = docxText("docs", "使用说明.docx");
+  assert.ok(
+    text.includes(`版本：${claimed[1]}`),
+    `docx 里没有「版本：${claimed[1]}」——改完 md 跑 python docs/tools/build-usage-docx.py`,
+  );
 });
