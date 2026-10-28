@@ -67,22 +67,41 @@ test("端口被占时自动退到下一个，并在 /state 带 plugin 标记", a
 test("对抗审是独立开关：关=0 条；开之后密度随档位 3/5，scope 随模式", async () => {
   await setSession("s-counter", "loop", "high");
   let r = await callTool("forge_level", "s-counter", 1);
-  assert.deepEqual(r.counter, { enabled: false, maxAttacks: 0, scope: "round-changes" }, "默认关");
+  assert.deepEqual(
+    r.counter,
+    { enabled: false, maxAttacks: 0, scope: "round-changes", isolation: "none" },
+    "默认关",
+  );
 
   // 打开对抗
   await post("s-counter", { counter: true });
   r = await callTool("forge_level", "s-counter", 2);
-  assert.deepEqual(r.counter, { enabled: true, maxAttacks: 3, scope: "round-changes" });
+  assert.deepEqual(r.counter, {
+    enabled: true,
+    maxAttacks: 3,
+    scope: "round-changes",
+    isolation: "subagent-preferred",
+  });
 
   // 极致档：5 条
   await post("s-counter", { level: "max" });
   r = await callTool("forge_level", "s-counter", 3);
-  assert.deepEqual(r.counter, { enabled: true, maxAttacks: 5, scope: "round-changes" });
+  assert.deepEqual(r.counter, {
+    enabled: true,
+    maxAttacks: 5,
+    scope: "round-changes",
+    isolation: "subagent-preferred",
+  });
 
   // 思考模式：scope 变成「动手前 + 交付前」
   await post("s-counter", { mode: "think" });
   const t = await callTool("clarify_tier", "s-counter", 4);
-  assert.deepEqual(t.counter, { enabled: true, maxAttacks: 5, scope: "plan+delivery" });
+  assert.deepEqual(t.counter, {
+    enabled: true,
+    maxAttacks: 5,
+    scope: "plan+delivery",
+    isolation: "subagent-preferred",
+  });
 });
 
 test("knownSession 只认工具写过的会话（客户端写不算）", async () => {
@@ -132,7 +151,9 @@ test("空会话用内置默认：think/high，GET 不建文件", async () => {
   assert.equal(s.level, "high");
   assert.equal(s.inherited, true);
   assert.equal(s.pending, false);
-  assert.equal(s.schema, 8);
+  assert.equal(s.schema, 9);
+  assert.equal(s.agent.on, false, "代理默认关");
+  assert.equal(s.agent.profile, "efficiency");
   assert.equal(existsSync(statePath), false);
 });
 
@@ -215,8 +236,9 @@ test("老 schema 5 迁移成 default 会话", async () => {
   assert.equal(s.session, "default");
   assert.equal(s.mode, "loop");
   const disk = JSON.parse(readFileSync(statePath, "utf8"));
-  assert.equal(disk.schema, 8);
+  assert.equal(disk.schema, 9);
   assert.equal(disk.sessions.default.level, "max");
+  assert.deepEqual(disk.sessions.default.agent, { on: false, profile: "efficiency" });
   assert.ok(existsSync(`${statePath}.bak`));
 });
 
@@ -235,7 +257,7 @@ test("坏 JSON：只读兜底，绝不覆写", async () => {
 });
 
 test("未知 schema：只读兜底，不降级覆写", async () => {
-  const future = JSON.stringify({ schema: 9, sessions: {}, forge: "max" });
+  const future = JSON.stringify({ schema: 10, sessions: {}, forge: "max" });
   writeFileSync(statePath, future, "utf8");
   const s = await (await get()).json();
   assert.equal(s.unsupported, true);
@@ -347,13 +369,15 @@ test("SSE 只推同一会话，帧里带 pending/turnLocked", async () => {
   }
 });
 
-test("检索开关：默认关、档位「增量」，/state 带三档与标签", async () => {
+test("检索开关：默认关、档位「增量」，/state 带两档与标签", async () => {
   rmSync(statePath, { force: true });
   const s = await (await get("s-route-default")).json();
   assert.deepEqual(s.route, { on: false, level: "high" }, "默认关，档位记「增量」");
-  assert.deepEqual(s.routeLevels, ["off", "high", "max"]);
-  assert.deepEqual(s.labels.route, { off: "本地", high: "增量", max: "全量" });
+  assert.deepEqual(s.routeLevels, ["high", "max"], "v3.0.0：去掉「本地」档，关掉就是不检索");
+  assert.deepEqual(s.labels.route, { high: "增量", max: "全量" });
   assert.deepEqual(s.defaultRoute, { on: false, level: "high" });
+  assert.deepEqual(s.agentProfiles, ["efficiency", "performance"]);
+  assert.deepEqual(s.defaultAgent, { on: false, profile: "efficiency" });
 });
 
 test("检索开关与档位分开写：开/关不动思考档，改档不动开关", async () => {
@@ -417,7 +441,7 @@ test("clarify_tier 带检索计划：全量给联网与不设上限的口径，�
   assert.ok(off.text.includes("检索：关"), off.text);
 });
 
-test("v7 状态文件迁移到 v8：补 route 默认并留 .bak", async () => {
+test("v7 状态文件跨两级迁移到 v9：补 route/agent 默认并留 .bak", async () => {
   writeFileSync(
     statePath,
     JSON.stringify({
@@ -428,11 +452,35 @@ test("v7 状态文件迁移到 v8：补 route 默认并留 .bak", async () => {
   );
   const s = await (await get()).json();
   assert.deepEqual(s.route, { on: false, level: "high" });
+  assert.deepEqual(s.agent, { on: false, profile: "efficiency" });
   const disk = JSON.parse(readFileSync(statePath, "utf8"));
-  assert.equal(disk.schema, 8);
+  assert.equal(disk.schema, 9);
   assert.deepEqual(disk.sessions.default.route, { on: false, level: "high" });
+  assert.deepEqual(disk.sessions.default.agent, { on: false, profile: "efficiency" });
   assert.ok(existsSync(`${statePath}.bak`), "迁移前要留 .bak");
   assert.equal(disk.sessions.default.counter, true, "老字段不能被迁移弄丢");
+});
+
+test("v8 状态文件的 route.level=off（旧「本地」）迁移到 high，不丢开关状态", async () => {
+  writeFileSync(
+    statePath,
+    JSON.stringify({
+      schema: 8,
+      sessions: {
+        default: {
+          mode: "think",
+          level: "high",
+          counter: false,
+          route: { on: true, level: "off" },
+          updatedAt: "2026-10-27T00:00:00.000Z",
+        },
+      },
+    }),
+    "utf8",
+  );
+  const s = await (await get()).json();
+  assert.deepEqual(s.route, { on: true, level: "high" }, "旧 off 归到增量，开关仍开");
+  assert.deepEqual(s.agent, { on: false, profile: "efficiency" });
 });
 
 test("循环模式也返回思考强度：tier 不再恒为 off，think 与档位同源", async () => {
@@ -450,4 +498,76 @@ test("循环模式也返回思考强度：tier 不再恒为 off，think 与档�
   assert.equal(r.think.source, "think");
   assert.equal(r.think.axes.length, 6, "极致要列满 6 条覆盖轴");
   assert.ok(r.text.includes("思考档位"), r.text);
+});
+
+test("代理开关：默认关、POST 写回、/state 带两档、非法值 400", async () => {
+  rmSync(statePath, { force: true });
+  let s = await (await get("s-agent")).json();
+  assert.deepEqual(s.agent, { on: false, profile: "efficiency" }, "默认关 + 效率档");
+
+  let res = await post("s-agent", { agent: { on: true } });
+  assert.equal(res.status, 200);
+  s = await (await get("s-agent")).json();
+  assert.deepEqual(s.agent, { on: true, profile: "efficiency" }, "开开关不改档位");
+
+  res = await post("s-agent", { agent: { profile: "performance" } });
+  assert.equal(res.status, 200);
+  s = await (await get("s-agent")).json();
+  assert.deepEqual(s.agent, { on: true, profile: "performance" });
+
+  res = await post("s-agent", { agent: { profile: "ultra" } });
+  assert.equal(res.status, 400, "非法档位直接 400");
+  res = await post("s-agent", { agent: "on" });
+  assert.equal(res.status, 400, "agent 必须是对象");
+});
+
+test("clarify_tier 代理关：只回 on:false，不占每步字", async () => {
+  await setSession("s-agent-off", "think", "high");
+  const r = await callTool("clarify_tier", "s-agent-off", 41);
+  assert.deepEqual(r.agent, { on: false });
+  assert.ok(r.text.includes("代理：关"), r.text);
+});
+
+test("clarify_tier 代理开但宿主没有 llm：available:false，不编造模型", async () => {
+  await setSession("s-agent-on", "think", "high");
+  await post("s-agent-on", { agent: { on: true, profile: "performance" } });
+  const r = await callTool("clarify_tier", "s-agent-on", 42);
+  assert.equal(r.agent.on, true);
+  assert.equal(r.agent.profile, "performance");
+  assert.equal(r.agent.available, false, "测试 ctx 没有 llm 服务");
+  assert.ok(r.text.includes("注册表不可用"), r.text);
+});
+
+test("代理也吃轮内快照：本轮点了，下一轮才生效", async () => {
+  await setSession("s-agent-turn", "think", "high");
+  let r = await callTool("clarify_tier", "s-agent-turn", 51);
+  assert.equal(r.agent.on, false);
+  await post("s-agent-turn", { agent: { on: true, profile: "efficiency" } });
+  r = await callTool("clarify_tier", "s-agent-turn", 51);
+  assert.equal(r.agent.on, false, "同一轮沿用开工快照");
+  assert.equal(r.pending, true);
+  r = await callTool("clarify_tier", "s-agent-turn", 52);
+  assert.equal(r.agent.on, true, "下一轮生效");
+});
+
+test("verify_claims 工具：文件命中、锚点不匹配、越界路径被拒", async () => {
+  const tool = tools.get("verify_claims");
+  assert.ok(tool, "verify_claims 必须注册");
+  // 版本号会随发布变，别把字面量写进断言
+  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  const out = await tool.execute({
+    claims: [
+      { text: pkg.version, source: { kind: "file", path: "package.json", line: 3 } },
+      { text: "9.9.9", source: { kind: "file", path: "package.json", line: 3 } },
+      { text: "x", source: { kind: "file", path: "../../outside.txt" } },
+      { text: "https://docs.python.org/3/", source: { kind: "url", url: "https://docs.python.org/3/" } },
+    ],
+  });
+  assert.equal(out.total, 4);
+  assert.equal(out.results[0].ok, true, `第 3 行确实是 ${pkg.version}`);
+  assert.equal(out.results[1].ok, false);
+  assert.equal(out.results[2].ok, false);
+  assert.equal(out.results[2].reasons[0], "outside-workspace");
+  assert.equal(out.results[3].level, "url-L1");
+  assert.ok(out.text.includes("已核"), out.text);
 });

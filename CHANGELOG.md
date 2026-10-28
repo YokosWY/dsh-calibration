@@ -1,5 +1,37 @@
 # 变更记录
 
+## 3.2.1 — 2026-10-28
+- **包名转公开：`@local/dsh-calibration-tier` → `dsh-calibration-tier`**（npm 首发；`private` 去掉，补 `repository` / `homepage` / `bugs` / `keywords`）。客户端 bundle id、`cordis.patch.yml` 的 `name`、安装脚本与测试同步改名；本地 profile 的 `dependencies` / `dsh.profile.bundles` 与 `node_modules` junction 已迁移到新名（重启生效）
+- **修：推理等级硬编码把自配模型误判成不可用**。3.2.0 里 `pickRoute` 给性能档写死 `reasoningEffort:"high"`，而 `llm-pi-ai` 注册的 `claude-opus-5-5` 没有声明 reasoning efforts，`resolveCallConfig` 直接拒（`does not support reasoning effort "high"`），于是每次自动挑到 opus 都回落官方
+- 改法：`resolveRoutes` 采集每个模型真正声明的 `efforts`（`resolveModelInfo`）；`pickRoute` 只在有声明时才传（性能取最高档、效率取默认档）；**自动挑出的 effort 现在真的会传给子代理**（3.2.0 只用了用户显式传的）
+- 预检失败若是「不支持该推理等级」，先去掉 `reasoning_effort` 重试自配，仍失败才回落官方；返回 `note` 会说清是哪一步
+- 测试 129 → 130
+
+## 3.2.0 — 2026-10-28
+- **`agent_delegate` 加 `backend`**：`spawn`（默认，运行时换模型）/ `claude-code` / `codex`。后两者走 `provider: "claude-code"` / `"codex"` 的 `startActivation`，**不传 `agentOptions`**（两个后端都是 `NO_START_CAPABILITIES`，模型只能用各自 CLI 的配置），返回文本明写「CLI 配置模型」
+- **自配 API 故障自动回退**：自动挑到非 `deepseek-*` 时先 `llm.resolveCallConfig` 预检；预检失败或启动失败都回退官方 route 重试一次，返回 `fellBack: true` + `note`，文本以「⚠️ 已回退」开头；CLI 后端起不来也回退到 `spawn` + 官方
+- **`domain` 参数**：code / reasoning / writing / longContext / toolUse，直接按领域挑，不再只能靠 module 映射
+- 测试 123 → 129（新增 backend、回退、domain 用例）
+
+## 3.1.0 — 2026-10-28
+- **新增 `agent_delegate`：当前会话就能用自配 API 的委派通道**。起因：官方 `subagent` 的白名单在会话创建时写进 projection 且只写一次，改配置只对新会话生效（实测当前会话仍报 `not allowed for this Session`）。读码发现白名单只在「模型显式传 provider/model」时校验（`assertAllowedModelSelection` 首行直接 return），所以 CT 自己调 `ctx.subagents.startActivation`，把 route 放进 `request.agentOptions`——走 provider 层，**不经过 allowedModels**
+- 工具参数：`prompt` / `description` / `module`（executor/review/counter/research）/ 可选 `provider`+`model`+`reasoning_effort`/`cwd`；不传模型就按当前「代理」档位与领域自动挑（含注册表里的自配 API）
+- **代价写清**：绕过宿主白名单，没有额度护栏；它是代理开关配套通道，不是通用后门
+- `counter-audit` 与 `clarify-needs` 改用 `agent_delegate` 起审者；`clarify_tier` 的派活提示同步
+- 测试 117 → 123（新增 `test/delegate.test.mjs` 6 项：自动挑、显式指定、无 subagents 报错、无 llm 报错、counter 隔离未知）
+
+## 3.0.0 — 2026-10-28
+- **第五个模式「代理」（v3）**：主条最右多一格 `代理`，开时右侧再出 `效率 | 性能` 两格（宽屏且检索关时并列；窄屏或检索开时收成一格轮换）。关掉 = 完全回到官方默认：不指定模型、不改白名单、`clarify_tier` 只回 `{on:false}`。代理是**策略开关**，不新建委托工具，执行仍走官方 `subagent`
+- **子代理模型路由（接口层，不注册实例）**：新增 `lib/agents.js`——能力基线（按族打领域分）、注册表指纹重算、用户覆盖（`~/.dsh/storages/calibration-models.json`）、对抗避开主模型 provider、注册表里没有的 route 自动剔除。`clarify_tier` / `forge_level` 返回 `agent = {on, profile, planId, modules, isolation}`
+- **诚实边界**：「自动更新」只更新「有哪些模型」，不更新「谁更强」；未知族一律 `unknown 5 分`。宿主 `llm` 服务无价格字段，没有自动「性价比」判据（按族 tier 估）
+- **新增只读工具 `verify_claims`**：机械核对「断言 ↔ 来源」——文件类查工作区内路径 / 行号范围 / 锚点是否在该行 ±3 行；URL 类只验语法与域名分级（L1–L4）；命令类只标 weak；越界路径直接拒。它只证明「有对应的源」，不证明源本身真实
+- **检索去掉「本地」档**：`ROUTE_LEVELS` 三档变两档（增量 / 全量）。开关关着就是不检索 = 本地行为；旧状态 `route.level="off"` 迁移成 `high`，`POST` 再收到 `off` 返回 400
+- **对抗 v2**：新增技能 `counter-audit`（权威性 / 真实性 / 全面性三查 + 隔离三级 + 报告头带审者模型与 planId）；`counterPlan` 增 `isolation` 字段。旧 `counter-review` 保留三个月做回退
+- **状态 schema 8 → 9**：补 `agent:{on:false,profile:"efficiency"}` 与 `turn.agent`（含 planId）；v7 跨两级、v8 单级迁移都留 `.bak`；未知 schema 仍只读兜底
+- **配色**：代理紫红 `#b06fd0`（白字对比 ≈3.1，与现有 2.65–3.52 同带），变量 `--dct-agent`，只落在代理格与效率/性能格
+- 工具描述与 `clarify-needs` 同步五模式；README / 使用说明 / demo 改「同框五模式」；`install-profile.ps1` 支持按路由表生成 `allowedModels`
+- 测试 86 → 117
+
 ## 2.3.0 — 2026-10-28
 - **`clarify_tier` 从「报档名」升级成「发清单」**：`think = {level,label,intensity,probes,axes,reverse,confirm,ask,text}`。常规 0 条；严格 2 个歧义点 · 3 条覆盖轴 · 1 次逆向；极致 3 · 6 · 3
 - **歧义点**（问不问的判据）：目标与验收能不能一句话说清 / 不可逆与外部动作（推送、发布、改设置、删除）谁批准、怎么回滚 / 范围与取舍。只有「答案会改变执行」的才弹窗问，能自己查证的不占提问额度

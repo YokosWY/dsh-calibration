@@ -39,7 +39,7 @@ function boot(remote = { mode: "think", level: "high", plugin: "dsh-calibration"
       props: props || {},
       children: children.flat ? children.flat() : children,
     }),
-    useState: (init) => [init, () => {}],
+    useState: (init) => [typeof init === "function" ? init() : init, () => {}],
     // 不立刻执行 cleanup：否则 focus 监听刚挂上就被拆掉，测不到
     useEffect: (fn) => {
       fn();
@@ -50,6 +50,7 @@ function boot(remote = { mode: "think", level: "high", plugin: "dsh-calibration"
       __ModuleLoader__: { load: (cfg) => { sandbox.__loaded = cfg; } },
       addEventListener: (type) => { listeners.push(type); },
       removeEventListener: () => {},
+      innerWidth: options.innerWidth === undefined ? 1400 : options.innerWidth,
     },
     document: {
       getElementById: () => null,
@@ -120,7 +121,7 @@ function boot(remote = { mode: "think", level: "high", plugin: "dsh-calibration"
 }
 
 test("模块 id 等于包名（防 duplicate factory）", () => {
-  assert.equal(boot().loadedId, "@local/dsh-calibration-tier");
+  assert.equal(boot().loadedId, "dsh-calibration-tier");
 });
 
 test("只注册一条插槽，order=10，槽位正确", () => {
@@ -131,29 +132,34 @@ test("只注册一条插槽，order=10，槽位正确", () => {
   assert.equal(env.registerCalls[0].cfg.name, "conversation.input.right");
 });
 
-test("悬停解释已移除：档位格与两个开关都不带 title", async () => {
+test("悬停解释只在代理格上：档位格与对抗/检索开关都不带 title", async () => {
   const tree = boot().render();
   await tick();
   for (const [i, child] of tree.children.entries()) {
     if (child.props && child.props.className && child.props.className.includes("dct-sep")) continue;
+    const cls = String((child.props && child.props.className) || "");
+    if (cls.includes("dct-agent")) continue; // 代理格与效率/性能格带 title（v3.0.0 新增）
     assert.equal("title" in child.props, false, `第 ${i} 个子节点还带 title`);
   }
   assert.equal("title" in tree.props, false, "根节点还带 title");
 });
 
-test("思考模式：3 档 + 3 隔离线 + 循环 + 对抗 + 检索，标签二字", async () => {
+test("思考模式：3 档 + 3 隔离线 + 循环 + 对抗 + 检索 + 代理，标签二字", async () => {
   const tree = boot().render();
   await tick();
   assert.equal(tree.props["data-mode"], "think");
-  assert.equal(tree.children.length, 9, "3 档 + 隔离线 + 循环 + 隔离线 + 对抗 + 隔离线 + 检索");
+  assert.equal(tree.children.length, 11, "3 档 + 隔离线 + 循环 + 隔离线 + 对抗 + 隔离线 + 检索 + 隔离线 + 代理");
   assert.equal(tree.children[3].props.className, "dct-sep");
   assert.equal(tree.children[5].props.className, "dct-sep");
   assert.equal(tree.children[7].props.className, "dct-sep");
+  assert.equal(tree.children[9].props.className, "dct-sep");
   const labels = tree.children.slice(0, 3).map((c) => c.children[0]);
   assert.deepEqual(labels, ["常规", "严格", "极致"]);
   assert.equal(tree.children[4].children[0], "循环");
   assert.equal(tree.children[6].children[0], "对抗");
   assert.equal(tree.children[8].children[0], "检索");
+  assert.equal(tree.children[10].children[0], "代理");
+  assert.equal(tree.props["data-agent"], "0", "代理默认关");
 });
 
 test("循环模式：标签换成循环档，循环格亮起", async () => {
@@ -186,6 +192,7 @@ test("用 SSE 接收其他窗口的改动并落本地", async () => {
     level: "max",
     counter: false,
     route: { on: false, level: "high" },
+    agent: { on: false, profile: "efficiency" },
   });
   env.streams[0].onmessage({ data: "{bad" }); // 坏帧不许抛
 });
@@ -481,7 +488,13 @@ test("两套都不认领：不连 SSE、点击只存本地，认领后补写一�
   assert.equal(env.posts.length, 0, "未认领时不该写任何实例");
   assert.deepEqual(
     JSON.parse(env.store.get("dsh-tier-mode:s-alpha")),
-    { mode: "think", level: "off", counter: false, route: { on: false, level: "high" } },
+    {
+      mode: "think",
+      level: "off",
+      counter: false,
+      route: { on: false, level: "high" },
+      agent: { on: false, profile: "efficiency" },
+    },
     "改动先存本地",
   );
 
@@ -499,7 +512,7 @@ test("检索关闭：不渲染检索三格，主条仍是 3 档 + 三开关", as
   assert.equal(routeCells.length, 0);
 });
 
-test("检索开启：最左三格是 本地/增量/全量，与思考档并存", async () => {
+test("检索开启：最左两格是 增量/全量，与思考档并存", async () => {
   const env = boot();
   env.store.set(
     "dsh-tier-mode:s-alpha",
@@ -509,26 +522,28 @@ test("检索开启：最左三格是 本地/增量/全量，与思考档并存",
   await tick();
   assert.equal(tree.props["data-route"], "1");
   assert.equal(tree.props["data-route-level"], "high");
-  assert.equal(tree.children.length, 13, "3 检索档 + 隔离线 + 3 思考档 + 隔离线 + 循环 + 隔离线 + 对抗 + 隔离线 + 检索");
+  assert.equal(tree.children.length, 14, "2 检索档 + 隔离线 + 3 思考档 + 隔离线 + 循环 + 隔离线 + 对抗 + 隔离线 + 检索 + 隔离线 + 代理");
   assert.deepEqual(
-    tree.children.slice(0, 3).map((c) => c.children[0]),
-    ["本地", "增量", "全量"],
+    tree.children.slice(0, 2).map((c) => c.children[0]),
+    ["增量", "全量"],
+    "v3.0.0：去掉「本地」档，关掉开关就是本地",
   );
-  assert.equal(tree.children[3].props.className, "dct-sep");
+  assert.equal(tree.children[2].props.className, "dct-sep");
   assert.deepEqual(
-    tree.children.slice(4, 7).map((c) => c.children[0]),
+    tree.children.slice(3, 6).map((c) => c.children[0]),
     ["常规", "严格", "极致"],
     "检索开着也必须能改思考档",
   );
-  assert.equal(tree.children[12].children[0], "检索");
-  assert.equal(tree.children[12].props["data-route-toggle"], "on");
+  assert.equal(tree.children[11].children[0], "检索");
+  assert.equal(tree.children[11].props["data-route-toggle"], "on");
+  assert.equal(tree.children[13].children[0], "代理");
 });
 
 test("点检索只提交 route.on，点全量只提交 route.level", async () => {
   const env = boot();
   const tree = env.render();
   await tick();
-  tree.children[8].props.onClick(); // 检索开关
+  tree.children[8].props.onClick(); // 检索开关（关态：0-2 档 / 3 sep / 4 循环 / 5 sep / 6 对抗 / 7 sep / 8 检索）
   await tick();
   assert.deepEqual(env.posts.at(-1), { route: { on: true } }, "切开关不许顺手改档位/模式");
 
@@ -538,7 +553,7 @@ test("点检索只提交 route.on，点全量只提交 route.level", async () =>
   );
   const onTree = env.render();
   await tick();
-  onTree.children[2].props.onClick(); // 全量
+  onTree.children[1].props.onClick(); // 全量（开态最左两格：0 增量 / 1 全量）
   await tick();
   assert.deepEqual(env.posts.at(-1), { route: { level: "max" } }, "换档不许顺手切换开关");
 });
@@ -554,11 +569,11 @@ test("检索 + 循环 + 对抗同开：四段各亮各的，data-route 与 data-
   assert.equal(tree.props["data-mode"], "loop");
   assert.equal(tree.props["data-route"], "1");
   assert.equal(tree.props["data-mix"], "1");
-  assert.equal(tree.children.length, 13);
-  assert.equal(tree.children[2].props["data-on"], "1", "全量档亮");
-  assert.equal(tree.children[8].props["data-mode-toggle"], "loop");
-  assert.equal(tree.children[10].props["data-counter-toggle"], "on");
-  assert.equal(tree.children[12].props["data-route-toggle"], "on");
+  assert.equal(tree.children.length, 14);
+  assert.equal(tree.children[1].props["data-on"], "1", "全量档亮");
+  assert.equal(tree.children[7].props["data-mode-toggle"], "loop");
+  assert.equal(tree.children[9].props["data-counter-toggle"], "on");
+  assert.equal(tree.children[11].props["data-route-toggle"], "on");
 });
 
 test("检索档位坏值退回默认「增量」", async () => {
@@ -578,4 +593,100 @@ test("样式：天蓝变量只定义一次，且只打在检索格与检索开�
   assert.ok(CSS.includes("#3a9ad9"), "天蓝取 #3a9ad9");
   assert.ok(CSS.includes(".dct-routecell[data-on='1']{background:var(--dct-route)"), "检索格用天蓝");
   assert.ok(CSS.includes(".dct-route-toggle[data-on='1']{background:var(--dct-route)"), "检索开关用天蓝");
+});
+
+test("代理开（宽屏 + 检索关）：出现 效率 / 性能 两格，data-agent=1", async () => {
+  const env = boot({ mode: "think", level: "high", plugin: "dsh-calibration" });
+  env.store.set(
+    "dsh-tier-mode:s-alpha",
+    JSON.stringify({ mode: "think", level: "high", agent: { on: true, profile: "performance" } }),
+  );
+  const tree = env.render();
+  await tick();
+  assert.equal(tree.props["data-agent"], "1");
+  assert.equal(tree.props["data-agent-profile"], "performance");
+  const profileCells = tree.children.filter((c) => String((c.props && c.props.className) || "").includes("dct-agentcell"));
+  assert.equal(profileCells.length, 2, "宽屏 + 检索关 → 两格并列");
+  assert.deepEqual(
+    profileCells.map((c) => c.children[0]),
+    ["效率", "性能"],
+  );
+  assert.equal(profileCells[1].props["data-on"], "1", "性能档亮");
+  assert.equal(profileCells[0].props["data-agent-compact"], undefined, "两格形态不带 compact 标记");
+});
+
+test("代理开 + 窄屏：效率/性能收成一格轮换（省 37px）", async () => {
+  const env = boot(undefined, { innerWidth: 1000 });
+  env.store.set(
+    "dsh-tier-mode:s-alpha",
+    JSON.stringify({ mode: "think", level: "high", agent: { on: true, profile: "efficiency" } }),
+  );
+  const tree = env.render();
+  await tick();
+  const profileCells = tree.children.filter((c) => String((c.props && c.props.className) || "").includes("dct-agentcell"));
+  assert.equal(profileCells.length, 1, "窄屏降级为一格");
+  assert.equal(profileCells[0].props["data-agent-compact"], "1");
+  assert.equal(profileCells[0].children[0], "效率");
+});
+
+test("代理开 + 检索开：两格降级为一格（避免 515px 全宽）", async () => {
+  const env = boot();
+  env.store.set(
+    "dsh-tier-mode:s-alpha",
+    JSON.stringify({
+      mode: "think",
+      level: "high",
+      route: { on: true, level: "high" },
+      agent: { on: true, profile: "performance" },
+    }),
+  );
+  const tree = env.render();
+  await tick();
+  const profileCells = tree.children.filter((c) => String((c.props && c.props.className) || "").includes("dct-agentcell"));
+  assert.equal(profileCells.length, 1);
+  assert.equal(profileCells[0].props["data-agent-compact"], "1");
+  assert.equal(profileCells[0].children[0], "性能");
+});
+
+test("点代理只提交 agent.on；点性能只提交 agent.profile", async () => {
+  const env = boot();
+  const tree = env.render();
+  await tick();
+  const agentToggle = tree.children.find((c) => String((c.props && c.props.className) || "").includes("dct-agent-toggle"));
+  assert.equal(agentToggle.children[0], "代理");
+  agentToggle.props.onClick();
+  await tick();
+  assert.deepEqual(env.posts.at(-1), { agent: { on: true } }, "切开关不许顺手改档位/模式/检索");
+
+  env.store.set(
+    "dsh-tier-mode:s-alpha",
+    JSON.stringify({ mode: "think", level: "high", agent: { on: true, profile: "efficiency" } }),
+  );
+  const onTree = env.render();
+  await tick();
+  const perf = onTree.children.find(
+    (c) => String((c.props && c.props.className) || "").includes("dct-agentcell") && c.props["data-agent-profile"] === "performance",
+  );
+  perf.props.onClick();
+  await tick();
+  assert.deepEqual(env.posts.at(-1), { agent: { profile: "performance" } }, "换档不许顺手切换开关");
+});
+
+test("代理档坏值退回默认「效率」", async () => {
+  const env = boot();
+  env.store.set(
+    "dsh-tier-mode:s-alpha",
+    JSON.stringify({ mode: "think", level: "high", agent: { on: true, profile: "ultra" } }),
+  );
+  const tree = env.render();
+  await tick();
+  assert.equal(tree.props["data-agent-profile"], "efficiency");
+});
+
+test("样式：代理紫红变量只定义一次，只打在代理格与开关上", () => {
+  const { CSS } = boot().mod.__internals;
+  assert.equal((CSS.match(/--dct-agent:/g) || []).length, 1, "变量只能定义一次");
+  assert.ok(CSS.includes("#b06fd0"), "代理取紫红 #b06fd0");
+  assert.ok(CSS.includes(".dct-agent-toggle[data-on='1']{background:var(--dct-agent)"), "代理开关用紫红");
+  assert.ok(CSS.includes(".dct-agentcell[data-on='1']{background:var(--dct-agent)"), "效率/性能格用紫红");
 });

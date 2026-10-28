@@ -3,6 +3,81 @@
 > GitHub Release 直接取用。更早版本（0.1.0–1.1.1）的逐条记录见 `CHANGELOG.md`。
 > 写法约定：只写机制、范围、限制、数字；不写形容词与口号。
 
+## v3.2.1 — 修：推理等级把自配模型误判成不可用
+
+**现象**：性能档自动挑到 `yokos-beichenapi-anthropic/claude-opus-5-5` 时，预检报 `does not support reasoning effort "high"`，随即回落官方——看起来像"自配 API 挂了"，其实是 CT 自己硬编码了推理等级。
+
+**改了什么**
+- 能力探测时采集模型真正声明的 `efforts`（`resolveModelInfo`）；没声明就**不传** `reasoning_effort`
+- 有声明时：性能档取最高一档、效率档取默认档；自动挑出的等级现在真的会传给子代理
+- 预检失败若是推理等级问题：先去掉 `reasoning_effort` 重试自配，仍失败才回落官方
+
+**影响面**：只改 `agent_delegate` 的挑路与预检；已存的档位/白名单/官方工具不变。
+
+## v3.2.0 — 三后端 + 自配故障自动回退
+
+**改了什么**：`agent_delegate` 支持 `backend: spawn | claude-code | codex`；自配 API 出意外时自动回退官方并提醒。
+
+**三后端**
+- `spawn`（默认）：模型走 `agentOptions`，按档位/领域自动挑，**运行时就能切**
+- `claude-code` / `codex`：走各自 CLI 的运行时（文件编辑、shell、代码理解），**模型由 CLI 配置决定**——这两个后端不接运行时模型参数，`agent_delegate` 也不再假装能切
+
+**回退链**
+1. 自动挑到非 `deepseek-*` 的 provider → 先 `llm.resolveCallConfig` 预检；
+2. 预检失败 / 子代理启动失败 → 回退官方 route 重试一次；
+3. 返回 `fellBack: true` + `note`，文本第一句「⚠️ 已回退」；
+4. CLI 后端起不来 → 回退 `spawn` + 官方。
+
+**限制**
+- `claude-code` / `codex` 要各自 CLI 已登录；没登录会在启动阶段失败并回退
+- 回退不改变你的配置，只保证这次任务能跑完；下次会重新按计划挑
+
+## v3.1.0 — 当前会话也能用自配 API：`agent_delegate`
+
+**改了什么**：官方 `subagent` 的模型白名单在会话创建时快照，改配置只对新会话生效。新增 `agent_delegate` 工具走 provider 层，**当前会话立刻可用**，含你自配的 API。
+
+**怎么用**
+- `agent_delegate({prompt, description, module})`：模型按当前「代理」档位与领域自动挑（executor→code / review、counter→reasoning / research→longContext）
+- 也可显式给 `provider` + `model` + `reasoning_effort`，原样透传
+- `module:"counter"` 会自动避开主模型 provider（拿不到主模型信息时标 `unknown`，不谎报隔离）
+
+**代价（重要）**：它把 route 放进子代理 `agentOptions`，**绕过宿主 allowedModels**，因此没有额度护栏。批量派活前先看成本；官方 `subagent` 仍按白名单走，两者并存。
+
+**限制**
+- 需要宿主有 `subagents` 服务（DSH 自带）；缺失时工具直接报错，不静默
+- 不自动装 codex / claude-code 后端；只走 `spawn`
+- 白名单对官方工具的老限制没变：要官方工具也用自配模型，仍得改 profile + 新开会话
+
+## v3.0.0 — 第五模式「代理」+ 子代理模型路由 + 对抗 v2
+
+**改了什么**：档位条从四模式变五模式，多一个可叠加的「代理」开关；检索少一档；对抗审升级为独立模型 + 三查。
+
+**代理（新）**
+- 开：`clarify_tier.agent` 给 `planId` 与各模块的 `provider/model`，模型据此派子代理；再选「效率（性价比）/ 性能（绝对质量）」
+- 关：`{on:false}`，不指定模型、不改白名单，等于官方默认
+- 它是策略开关，不接管官方 `subagent`；不改宿主白名单就改不了「能不能用某个模型」——`list_subagent_models` 对白名单外的 provider 会直接报 `not allowed for this Session`
+
+**模型怎么挑**
+- 读宿主注册表（含你自配的 API），按能力基线（族 × 领域）打分，同分看上下文窗口
+- 自动更新的是「有哪些模型」，「谁更强」不会自动知道；未知族标 `unknown 5 分`
+- 对抗档强制避开主模型 provider；只能同族时降级为「隔离度：中」
+
+**检索**
+- 三档改两档：增量 / 全量。「本地」不再单独占一格——**关掉开关就是本地**
+- 旧状态里的 `off` 自动迁移成 `increment`（high）
+
+**对抗 v2**
+- 新增技能 `counter-audit`：权威性（L1–L4）/ 真实性（逐条回源）/ 全面性（原六轴 + 数据/引用/逻辑）
+- 新增工具 `verify_claims`：机械核对断言与来源（文件行号 / URL 域名 / 命令片段），只证明「有对应源」，不证明源真实
+- 报告头固定写 `审者模型 · 隔离度 · planId`，不许用主模型自审冒充隔离审
+
+**状态**：schema 8 → 9（补 `agent`）；v7 跨两级迁移、v8 单级迁移，迁移前留 `.bak`。
+
+**限制**
+- 子代理白名单是会话创建时的快照：改了配置只对之后新建的会话生效
+- 注册表里只有同族模型时，效率/性能两档可能给出相同 route（不是 bug，是可选模型不够）
+- 代理关 ≠ 收回权限：白名单扩容是一次性的
+
 ## v2.3.0 — 思考强度落到清单：歧义点 / 覆盖轴 / 逆向
 
 **改了什么**：`clarify_tier` 不再只回一个档名，而是随档位发三张清单，模型据此决定「问什么、看多全、怎么反推」。

@@ -60,7 +60,7 @@ if (-not $Uninstall) {
   if (-not $plugin.name) { Fail "插件 package.json 里没有 name" }
   if (-not $plugin.dsh.bundle.patch) { Fail "插件没有声明 dsh.bundle.patch（DSH 需要它来挂进组合包）" }
 }
-$name = if ($Uninstall) { "@local/dsh-calibration-tier" } else { $plugin.name }
+$name = if ($Uninstall) { "dsh-calibration-tier" } else { $plugin.name }
 
 # ── 读 profile 清单 ────────────────────────────────────────────────────────
 $raw = Get-Content $manifestPath -Raw -Encoding utf8
