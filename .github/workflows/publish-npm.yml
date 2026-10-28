@@ -1,0 +1,42 @@
+name: publish-npm
+
+# 手动触发：等 npm 侧配好 Trusted Publisher（Settings → Trusted Publisher，仓库 YokosWY/dsh-calibration-tier，
+# workflow 文件名 publish-npm.yml，环境留空）之后，点一次 Run workflow 即可发布，不需要 OTP、不需要长期 token。
+# 配好之前手动跑会失败（npm 不认这个 OIDC 身份），不会影响任何自动流程：本文件没有 push/tag 触发器。
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "只打包不发布（npm publish --dry-run）"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write # Trusted Publishing（OIDC）必需
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      # Trusted Publishing 要求较新的 npm（>=11.5），顺便把 registry 指到官方
+      - name: Upgrade npm
+        run: npm install -g npm@latest
+
+      - name: Verify (lint + test)
+        run: npm run verify
+
+      - name: Publish (dry run)
+        if: ${{ inputs.dry_run }}
+        run: npm publish --dry-run
+
+      - name: Publish
+        if: ${{ !inputs.dry_run }}
+        run: npm publish --provenance --access public
