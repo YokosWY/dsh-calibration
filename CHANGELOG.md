@@ -1,5 +1,12 @@
 # 变更记录
 
+## 3.2.3 — 2026-10-28
+- **修：免费线在同分时抢走自动挑模型**。实测 `state.agent.profile = efficiency` 时自动挑到 `buddy/deepseek-v4-flash`（`dsh-our-free-model` 的 WorkBuddy 免费线），子代理启动成功、运行期静默失败（无收尾消息）。根因不是能力分，而是同族同分（`deepseek-v4-flash` 与官方同分 8）时按 `provider:model` 字典序，`buddy` 排在最前。
+- 改法：`scoreRoute` 给免费线打 `free` 标记（`core.js` 的 `FREE_LINE_PROVIDERS`），`better()` 在**同分时**把免费线排后——能力分更高照样能选中，不是无条件封杀；手动点名不受影响；`calibration-models.json` 里 `{ models: { "provider/model": { free: true|false } } }` 可单条覆盖。
+- 名单只收名字够独特的渠道，`minimax` / `gemini` / `zcode` 这类可能与正规 provider 撞名的故意不收。
+- 测试 131 → 132（新增：同分优先非免费线、高分免费线仍可选、free 覆盖生效）。
+- 注意：插件在进程启动时加载，**改完要重启 DSH 才生效**。
+
 ## 3.2.2 — 2026-10-28
 - **修：`yokos-beichenapi-anthropic` 的 baseURL 多了一层 `/v1`**。adapter 会自己拼 `/v1/messages`，于是实际请求 `…/v1/v1/messages` → `404 page not found`（子代理启动成功、运行中才挂，没有任何提示）。实测对照：`https://api.beichenapi.com/v1/messages` = 401（路径对、缺 key），`…/v1/v1/messages` = 404。已把该 provider 的 `baseURL` 改成 `https://api.beichenapi.com`（profile 改前备份 `cordis.patch.yml.bak-*-anthropic-baseurl`）
 - **新增 `fallbackRoute`**：`agent_delegate` 启动自配子代理时，一并返回官方兜底 route；子代理若**运行期**失败（收到 `failed` 通知，工具无法自己等待异步结果），主模型用该 route 重派一次并告知用户「自配失败，已用官方兜底」。`clarify_tier` 的派活提示同步写清

@@ -3,6 +3,19 @@
 > GitHub Release 直接取用。更早版本（0.1.0–1.1.1）的逐条记录见 `CHANGELOG.md`。
 > 写法约定：只写机制、范围、限制、数字；不写形容词与口号。
 
+## v3.2.3 — 免费线不再抢走自动挑模型
+
+**现象**：效率档自动挑到 `buddy/deepseek-v4-flash`（第三方插件的 WorkBuddy 免费线），子代理启动成功，**运行中静默失败**，没有任何收尾消息。
+
+**根因**：不是能力分低——`deepseek-v4-flash` 与官方同族同分（8）。同分的 tie-break 是 `provider:model` 字典序，`buddy` 排最前，于是免费线赢过官方。
+
+**改了什么**
+- `scoreRoute` 给免费线打 `free` 标记（名单见 `lib/core.js` 的 `FREE_LINE_PROVIDERS`）
+- `better()` 在**同分时**把免费线排后：能力分更高照样能选中，不是封杀；手动点名（provider + model）不受影响
+- `calibration-models.json` 里 `{ models: { "provider/model": { free: true|false } } }` 可单条覆盖
+
+**限制**：插件在进程启动时加载，升级后需重启 DSH；名单是静态约定，新出现的免费线要手工补进去。
+
 ## v3.2.2 — 修自配 Anthropic 的 404，并补运行期兜底
 
 **现象**：`agent_delegate` 启动 `yokos-beichenapi-anthropic/claude-opus-5-5` 成功，但子代理运行即失败（`404 page not found`，无任何提示）。

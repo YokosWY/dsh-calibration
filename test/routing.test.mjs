@@ -50,6 +50,26 @@ test("指纹：排序稳定，注册表变化即变", () => {
   assert.equal(f1.length, 12);
 });
 
+test("免费线只做同分降权：官方/自配同分时优先，手动点名与 free 覆盖都照旧", () => {
+  // 实测坑：buddy/deepseek-v4-flash 与 deepseek-account/deepseek-v4-flash 同族同分，
+  // 原来按 provider 名序 → "buddy" 排前 → 挑到免费线，运行期静默失败
+  const free = agents.scoreRoute("buddy", "deepseek-v4-flash");
+  const paid = agents.scoreRoute("deepseek-account", "deepseek-v4-flash");
+  assert.equal(free.free, true, "免费线要打标记");
+  assert.equal(paid.free, false);
+  const picked = agents.pickRoute([free, paid], "executor", "efficiency");
+  assert.equal(picked.provider, "deepseek-account", "同分优先非免费线");
+
+  // 能力分更高时免费线照样能选中（不是无条件封杀）
+  const strongFree = agents.scoreRoute("buddy", "claude-opus-5-5");
+  const weakPaid = agents.scoreRoute("deepseek-account", "deepseek-flash");
+  assert.equal(agents.pickRoute([strongFree, weakPaid], "review", "performance").provider, "buddy");
+
+  // 单条覆盖：明确标 free:false 就不再降权（名称序回到 tie-break）
+  const opted = agents.scoreRoute("buddy", "deepseek-v4-flash", { "buddy/deepseek-v4-flash": { free: false } });
+  assert.equal(opted.free, false, "覆盖优先于默认名单");
+});
+
 test("挑 route：性能档取领域分最高，效率档只在 low/mid 里挑", () => {
   const perf = agents.pickRoute(ROUTES, "review", "performance");
   assert.equal(perf.model, "claude-opus-5-5", "reasoning 10 分最高");
