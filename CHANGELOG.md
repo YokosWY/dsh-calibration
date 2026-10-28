@@ -1,5 +1,11 @@
 # 变更记录
 
+## 3.2.2 — 2026-10-28
+- **修：`yokos-beichenapi-anthropic` 的 baseURL 多了一层 `/v1`**。adapter 会自己拼 `/v1/messages`，于是实际请求 `…/v1/v1/messages` → `404 page not found`（子代理启动成功、运行中才挂，没有任何提示）。实测对照：`https://api.beichenapi.com/v1/messages` = 401（路径对、缺 key），`…/v1/v1/messages` = 404。已把该 provider 的 `baseURL` 改成 `https://api.beichenapi.com`（profile 改前备份 `cordis.patch.yml.bak-*-anthropic-baseurl`）
+- **新增 `fallbackRoute`**：`agent_delegate` 启动自配子代理时，一并返回官方兜底 route；子代理若**运行期**失败（收到 `failed` 通知，工具无法自己等待异步结果），主模型用该 route 重派一次并告知用户「自配失败，已用官方兜底」。`clarify_tier` 的派活提示同步写清
+- 说明：预检（`resolveCallConfig`）只验证配置能否解析，**不验证真实连通性**——所以 404 这种问题只会在运行期暴露
+- **修测试守卫口径**：「README 写的测试条数跟实际一致」原来用 `\btest\(` 数测试，把 `/re/.test(x)` 这类正则调用也算成一条（README 写 131 却被判 132）；改成只数顶格 `test(`，与 `node --test` 的 `ℹ tests N` 对齐。测试 130 → 131
+
 ## 3.2.1 — 2026-10-28
 - **包名转公开：`@local/dsh-calibration-tier` → `dsh-calibration-tier`**（npm 首发；`private` 去掉，补 `repository` / `homepage` / `bugs` / `keywords`）。客户端 bundle id、`cordis.patch.yml` 的 `name`、安装脚本与测试同步改名；本地 profile 的 `dependencies` / `dsh.profile.bundles` 与 `node_modules` junction 已迁移到新名（重启生效）
 - **修：推理等级硬编码把自配模型误判成不可用**。3.2.0 里 `pickRoute` 给性能档写死 `reasoningEffort:"high"`，而 `llm-pi-ai` 注册的 `claude-opus-5-5` 没有声明 reasoning efforts，`resolveCallConfig` 直接拒（`does not support reasoning effort "high"`），于是每次自动挑到 opus 都回落官方

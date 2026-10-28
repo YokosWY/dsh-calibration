@@ -3,6 +3,19 @@
 > GitHub Release 直接取用。更早版本（0.1.0–1.1.1）的逐条记录见 `CHANGELOG.md`。
 > 写法约定：只写机制、范围、限制、数字；不写形容词与口号。
 
+## v3.2.2 — 修自配 Anthropic 的 404，并补运行期兜底
+
+**现象**：`agent_delegate` 启动 `yokos-beichenapi-anthropic/claude-opus-5-5` 成功，但子代理运行即失败（`404 page not found`，无任何提示）。
+
+**根因**：profile 里该 provider 的 `baseURL` 写成 `https://api.beichenapi.com/v1`，而适配器会再拼 `/v1/messages` → 实际请求 `/v1/v1/messages`。
+实测：`/v1/messages` 返回 401（路径对、只缺 key），`/v1/v1/messages` 返回 404。
+
+**改了什么**
+- `baseURL` 改成 `https://api.beichenapi.com`（改前备份 profile）
+- `agent_delegate` 返回 `fallbackRoute`：运行期失败时主模型直接拿它重派官方，并告知「自配失败，已用官方兜底」
+
+**限制**：预检只保证配置可解析，不保证网络连通；运行期失败只能靠 `fallbackRoute` 重派，工具自己不会等待子代理结果。
+
 ## v3.2.1 — 修：推理等级把自配模型误判成不可用
 
 **现象**：性能档自动挑到 `yokos-beichenapi-anthropic/claude-opus-5-5` 时，预检报 `does not support reasoning effort "high"`，随即回落官方——看起来像"自配 API 挂了"，其实是 CT 自己硬编码了推理等级。

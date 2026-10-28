@@ -184,7 +184,9 @@ test("README 写的测试条数跟实际一致", () => {
   let actual = 0;
   for (const f of files) {
     const body = read("test", f).replace(/^\s*\/\/.*$/gm, "");
-    actual += (body.match(/\btest\(/g) || []).length;
+    // 只数顶格的 test( 声明；\btest\( 会把 /re/.test(x) 这类正则调用也算进去，
+    // 与实际 `ℹ tests N` 差 1~2 项（v3.2.2 起对齐 runner 口径）
+    actual += (body.match(/^test\(/gm) || []).length;
   }
   assert.equal(claimed, actual, `README 写 ${claimed} 项，实际 ${actual} 项`);
 });

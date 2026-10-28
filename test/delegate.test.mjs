@@ -199,6 +199,18 @@ test("启动阶段失败也能回退一次（自配失败 → 官方重试）", 
   assert.ok(out.text.includes("已回退"), out.text);
 });
 
+test("返回 fallbackRoute：自配成功时也给出官方兜底 route（供运行期失败重派）", async () => {
+  const { tool } = boot();
+  const out = await tool.execute(
+    { prompt: "p", description: "d", provider: "yokos-beichenapi-anthropic", model: "claude-opus-5-5" },
+    exec(),
+  );
+  assert.equal(out.fellBack, false);
+  assert.ok(out.fallbackRoute, "必须给官方兜底 route");
+  assert.match(out.fallbackRoute.provider, /^deepseek-/);
+  assert.ok(out.text.includes("重派"), "文本要说明运行期失败怎么重派");
+});
+
 test("domain 参数：可绕过 module 映射，直接按领域挑", async () => {
   const { tool } = boot();
   const out = await tool.execute({ prompt: "p", description: "d", module: "review", domain: "longContext" }, exec());
