@@ -3,6 +3,20 @@
 > GitHub Release 直接取用。更早版本（0.1.0–1.1.1）的逐条记录见 `CHANGELOG.md`。
 > 写法约定：只写机制、范围、限制、数字；不写形容词与口号。
 
+## v3.3.0 — 免费线名单可配
+
+**背景**：v3.2.3 起免费线在同分时降权，但名单是写死在 `lib/core.js` 的 —— 装了新的免费额度插件，就得改代码等发版。
+
+**改了什么**
+- 名单改为「内置默认 + 配置文件覆盖」：`~/.dsh/storages/calibration-models.json`
+  ```json
+  { "providers": { "buddy": false, "my-free-channel": true } }
+  ```
+  `false` 摘掉内置项、`true` 加新渠道；与 `models` 能力覆盖共用同一份文件
+- 名单按文件 `mtime+size` 缓存，改完下一个请求即生效，不用重启；单项 `free` 仍优先于名单
+
+**为什么不自动识别**：宿主 `llm` 的 provider/model 信息里没有任何价格或免费标记（`LlmProviderInfo` 只有 `id/name`），做不到自动判定。
+
 ## v3.2.3 — 免费线不再抢走自动挑模型
 
 **现象**：效率档自动挑到 `buddy/deepseek-v4-flash`（第三方插件的 WorkBuddy 免费线），子代理启动成功，**运行中静默失败**，没有任何收尾消息。

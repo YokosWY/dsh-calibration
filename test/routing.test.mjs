@@ -2,7 +2,7 @@
 // 依赖 DSH_HOME：在 import 之前指到临时目录，避免读写真实凭据/状态。
 import test from "node:test";
 import assert from "node:assert";
-import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -48,6 +48,21 @@ test("指纹：排序稳定，注册表变化即变", () => {
   const f3 = agents.fingerprintOf([...ROUTES, agents.scoreRoute("x", "gpt-9")]);
   assert.notEqual(f1, f3);
   assert.equal(f1.length, 12);
+});
+
+test("免费线名单可配：models.json 的 providers 覆盖内置默认（不用改代码）", () => {
+  const file = join(home, "storages", "calibration-models.json");
+  assert.equal(agents.readFreeLines().has("buddy"), true, "内置名单默认含 buddy");
+
+  writeFileSync(file, JSON.stringify({ providers: { buddy: false, "my-free-channel": true } }));
+  const set = agents.readFreeLines();
+  assert.equal(set.has("buddy"), false, "providers 里 false 可摘掉内置项");
+  assert.equal(set.has("my-free-channel"), true, "providers 里 true 可加新渠道");
+  assert.equal(agents.scoreRoute("buddy", "deepseek-v4-flash").free, false, "scoreRoute 跟着名单走");
+  assert.equal(agents.scoreRoute("my-free-channel", "deepseek-v4-flash").free, true);
+
+  rmSync(file);
+  assert.equal(agents.readFreeLines().has("buddy"), true, "删掉配置即回到内置默认");
 });
 
 test("免费线只做同分降权：官方/自配同分时优先，手动点名与 free 覆盖都照旧", () => {
