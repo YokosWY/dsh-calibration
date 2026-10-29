@@ -150,7 +150,7 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 ## 测试
 
 ```bash
-npm test        # node --test，136 项，约 6 秒
+npm test        # node --test，140 项，约 6 秒
 npm run lint    # scripts/check.mjs：lib 下所有模块 + 所有测试逐个 node --check
 npm run verify  # lint + test，本地 CI 就用这条
 ```
