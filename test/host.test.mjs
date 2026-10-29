@@ -6,15 +6,45 @@ import { mkdtempSync, writeFileSync, readFileSync, mkdirSync, rmSync, existsSync
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import http from "node:http";
+import net from "node:net";
 
 const home = mkdtempSync(join(tmpdir(), "dsh-tier-test-"));
 process.env.DSH_HOME = home;
-process.env.DSH_CLARIFY_TIER_PORT = "43991";
 
-// 先占住 43991，验证宿主会自动退到 43992
-const blocker = http.createServer((req, res) => res.end("blocked"));
-await new Promise((resolve) => blocker.listen(43991, "127.0.0.1", resolve));
-blocker.unref();
+// 端口不写死（修 flaky，2026-10-30）：写死 43991/43992 时，两个进程同时跑测试会互抢——
+// 抢输的一方永远等不到「桥接就绪」，整份用例整块变红（单跑却全过）。
+// 做法：让 OS 分配一个空闲端口并先占住它，再把这个端口告诉插件，插件往上扫一格就该绑 port+1；
+// 真绑上的端口从「桥接就绪」日志里读，不假设。
+async function bindBlocker() {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const server = http.createServer((req, res) => res.end("blocked"));
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    server.unref();
+    const port = server.address().port;
+    // 留出足够余量给「往上扫一格」，别贴 65535 边
+    if (port > 65535 - 10) {
+      await new Promise((r) => server.close(r));
+      continue;
+    }
+    // 顺手确认 port+1 当下是空的：否则「退到 port+1」的断言会偶发不成立
+    const probe = net.createServer();
+    const free = await new Promise((resolve) => {
+      probe.once("error", () => resolve(false));
+      probe.listen(port + 1, "127.0.0.1", () => resolve(true));
+    });
+    if (free) await new Promise((r) => probe.close(r));
+    if (free) return server;
+    await new Promise((r) => server.close(r));
+  }
+  throw new Error("找不到可用的测试端口");
+}
+
+const blocker = await bindBlocker();
+const blockedPort = blocker.address().port;
+process.env.DSH_CLARIFY_TIER_PORT = String(blockedPort);
 
 const mod = await import("../lib/index.js");
 
@@ -26,9 +56,22 @@ mod.apply({
   effect: () => {},
 });
 
-const BASE = "http://127.0.0.1:43992/state";
 const statePath = join(home, "storages", "calibration.json");
 const NL = String.fromCharCode(10);
+
+// 真绑上的端口从「桥接就绪」日志里读（不假设 blockedPort + 1 一定成功）
+async function waitBridgePort() {
+  for (let i = 0; i < 200; i += 1) {
+    const line = logs.find((l) => l.includes("桥接就绪 http://127.0.0.1:"));
+    const match = line && line.match(/:(\d+)\/state/);
+    if (match) return Number(match[1]);
+    await new Promise((r) => setTimeout(r, 25));
+  }
+  throw new Error(`bridge did not start；logs=${logs.join(" | ")}`);
+}
+
+const bridgePort = await waitBridgePort();
+const BASE = `http://127.0.0.1:${bridgePort}/state`;
 
 async function ready() {
   for (let i = 0; i < 60; i += 1) {
@@ -119,9 +162,10 @@ test("工具认领后，客户端再改档不会把 owner 降回去", async () =
 test("退让成功时日志只报一次就绪，且报的是真绑上的端口", () => {
   const ready = logs.filter((line) => line.includes("桥接就绪"));
   assert.equal(ready.length, 1, `「桥接就绪」应只有一条，实际：${ready.join(" | ")}`);
-  assert.ok(ready[0].includes(":43992/state"), `就绪日志应写 43992：${ready[0]}`);
+  assert.equal(bridgePort, blockedPort + 1, `桥接应退到 ${blockedPort + 1}，实际 ${bridgePort}`);
+  assert.ok(ready[0].includes(`:${bridgePort}/state`), `就绪日志应写真绑上的端口：${ready[0]}`);
   assert.ok(
-    !logs.some((line) => line.includes("43991") && line.includes("退化为只读")),
+    !logs.some((line) => line.includes(String(blockedPort)) && line.includes("退化为只读")),
     "单个端口被占不该说成「控件会退化为只读」",
   );
 });
@@ -323,7 +367,7 @@ async function waitFor(fn, timeout = 4000) {
 function openStream(session, headers = {}) {
   const path = `/events?session=${encodeURIComponent(session)}`;
   return new Promise((resolve, reject) => {
-    const req = http.get({ host: "127.0.0.1", port: 43992, path, headers }, (res) => {
+    const req = http.get({ host: "127.0.0.1", port: bridgePort, path, headers }, (res) => {
       const frames = [];
       let buf = "";
       res.setEncoding("utf8");
