@@ -85,17 +85,39 @@ test("免费线只做同分降权：官方/自配同分时优先，手动点名�
   assert.equal(opted.free, false, "覆盖优先于默认名单");
 });
 
-test("挑 route：性能档取领域分最高，效率档只在 low/mid 里挑", () => {
+test("挑 route：性能档取领域分最高；效率档=强化一档（严格强于基线、同档取便宜）", () => {
   const perf = agents.pickRoute(ROUTES, "review", "performance");
   assert.equal(perf.model, "claude-opus-5-5", "reasoning 10 分最高");
   assert.equal(perf.reasoningEffort, undefined, "模型没声明 efforts 就不传（传了会被适配器拒）");
 
-  const eff = agents.pickRoute(ROUTES, "review", "efficiency");
-  assert.notEqual(eff.model, "claude-opus-5-5", "效率档不挑 high tier");
-  assert.ok(["low", "mid"].includes(eff.tier), `效率档挑到了 ${eff.tier}`);
+  // 基线 = 主模型 flash（reasoning 7）：效率档要挑更强的，且只升一档（mid），不跳 high
+  const flash = agents.scoreRoute("deepseek-official", "deepseek-flash");
+  const v4pro = agents.scoreRoute("deepseek-account", "deepseek-v4-pro"); // mid, reasoning 8, cost 1
+  const sonnet = agents.scoreRoute("yokos-beichenapi-anthropic", "claude-sonnet-5-5"); // mid, 8, cost 3
+  const opus = agents.scoreRoute("yokos-beichenapi-anthropic", "claude-opus-5-5"); // high, 10, cost 5
+  const routes = [flash, v4pro, sonnet, opus];
+  const main = { mainProvider: "deepseek-official", mainModel: "deepseek-flash" };
+
+  const eff = agents.pickRoute(routes, "review", "efficiency", main);
+  assert.equal(eff.model, "deepseek-v4-pro", "同为 mid、同分 8 时取代价低的（cost 1 < 3）");
+  assert.ok(eff.score > flash.score.reasoning, "必须严格强于基线");
+  assert.equal(eff.upgraded, true);
+  assert.equal(eff.tier, "mid", "只升一档，不直接跳 high");
+
+  // 基线已是上限：没有更强的，退到「同分更便宜」，再没有就沿用基线
+  const atTop = agents.pickRoute([opus], "review", "efficiency", {
+    mainProvider: "yokos-beichenapi-anthropic",
+    mainModel: "claude-opus-5-5",
+  });
+  assert.equal(atTop.model, "claude-opus-5-5");
+  assert.equal(atTop.upgraded, false, "强化不了就如实标 false");
+
+  // 没有基线信息：退化成「不挑 high」
+  const noBase = agents.pickRoute(routes, "review", "efficiency");
+  assert.notEqual(noBase.tier, "high", "主模型未知时不许猜 high 档");
 });
 
-test("推理等级：模型声明了 efforts 才传，性能取最高、效率取默认", () => {
+test("推理等级：模型声明了 efforts 才传，性能取最高、效率取默认（v3.4.0：升档不砍强度）", () => {
   const base = agents.scoreRoute("p-eff", "claude-opus-5-5");
   const withEfforts = {
     ...base,
@@ -107,9 +129,31 @@ test("推理等级：模型声明了 efforts 才传，性能取最高、效率�
     ],
   };
   assert.equal(agents.pickRoute([withEfforts], "review", "performance").reasoningEffort, "high");
-  assert.equal(agents.pickRoute([withEfforts], "review", "efficiency").reasoningEffort, "medium", "效率档取默认档");
+  assert.equal(
+    agents.pickRoute([withEfforts], "review", "efficiency").reasoningEffort,
+    "medium",
+    "效率档已升模型，推理强度取模型默认档（不砍到底）",
+  );
+  const onlyOff = { ...base, tier: "mid", efforts: [{ id: "off" }, { id: "high", default: true }] };
+  assert.equal(agents.pickRoute([onlyOff], "review", "efficiency").reasoningEffort, "high", "off/disabled 不算可跑档，退到默认档");
   const none = { ...base, tier: "mid", efforts: [] };
   assert.equal(agents.pickRoute([none], "review", "efficiency").reasoningEffort, undefined);
+});
+
+test("计分覆盖 5 个领域：domain=writing / toolUse 也能排序（v3.3.1 修）", () => {
+  const flash = agents.scoreRoute("deepseek-official", "deepseek-flash"); // writing 6 / toolUse 7
+  const opus = agents.scoreRoute("deepseek-official", "claude-opus-5-5"); // writing 9 / toolUse 9
+  assert.equal(flash.score.writing, 6, "writing 不再是 undefined");
+  assert.equal(opus.score.toolUse, 9, "toolUse 不再是 undefined");
+  assert.equal(agents.pickRoute([flash, opus], "executor", "performance", { domain: "writing" }).model, "claude-opus-5-5");
+  assert.equal(agents.pickRoute([flash, opus], "executor", "performance", { domain: "toolUse" }).model, "claude-opus-5-5");
+});
+
+test("对抗：异 provider 同族不算真隔离（v3.3.1 修，标 mid）", () => {
+  const routes = [agents.scoreRoute("deepseek-official", "deepseek-flash"), agents.scoreRoute("deepseek-account", "deepseek-flash")];
+  const r = agents.pickRoute(routes, "counter", "performance", { mainProvider: "deepseek-official", mainModel: "deepseek-flash" });
+  assert.equal(r.provider, "deepseek-account");
+  assert.equal(r.isolation, "mid", "同族不同入口只是换门，不是异族隔离");
 });
 
 test("对抗：必须避开主模型 provider；只能同 provider 时降级为中/低", () => {

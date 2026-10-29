@@ -1,6 +1,6 @@
 {
   "name": "dsh-calibration-tier",
-  "version": "3.3.0",
+  "version": "3.5.0",
   "author": "YokosWY",
   "repository": {
     "type": "git",
@@ -24,7 +24,7 @@
     "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },
-  "description": "DSH 输入框档位条：一框五模式——思考（常规/严格/极致）、循环（轻量/交付/极致）、对抗、检索（增量/全量）、代理（效率/性能）；配套 agent_delegate（spawn / claude-code / codex 三后端，自配 API 故障自动回退官方并提醒）与 verify_claims。",
+  "description": "DSH 输入框档位条：一框五模式——思考（常规/严格/极致）、循环（轻量/交付/极致）、对抗、检索（一格轮换：本地/增量/全量）、代理（一格轮换：默认/效率/性能）；配套 agent_delegate（spawn / claude-code / codex 三后端，自配 API 故障自动回退官方并提醒）与 verify_claims。",
   "license": "MIT",
   "scripts": {
     "test": "node --test \"test/*.test.mjs\"",

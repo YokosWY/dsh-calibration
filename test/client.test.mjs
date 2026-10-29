@@ -132,33 +132,33 @@ test("只注册一条插槽，order=10，槽位正确", () => {
   assert.equal(env.registerCalls[0].cfg.name, "conversation.input.right");
 });
 
-test("悬停解释只在代理格上：档位格与对抗/检索开关都不带 title", async () => {
+test("悬停解释只在两个轮换格上：档位格、循环、对抗都不带 title", async () => {
   const tree = boot().render();
   await tick();
   for (const [i, child] of tree.children.entries()) {
     if (child.props && child.props.className && child.props.className.includes("dct-sep")) continue;
     const cls = String((child.props && child.props.className) || "");
-    if (cls.includes("dct-agent")) continue; // 代理格与效率/性能格带 title（v3.0.0 新增）
+    if (cls.includes("dct-routecell") || cls.includes("dct-agentcell")) continue; // 轮换格要说明「点一下切到哪」
     assert.equal("title" in child.props, false, `第 ${i} 个子节点还带 title`);
   }
   assert.equal("title" in tree.props, false, "根节点还带 title");
 });
 
-test("思考模式：3 档 + 3 隔离线 + 循环 + 对抗 + 检索 + 代理，标签二字", async () => {
+test("思考模式：检索格 + 3 档 + 3 隔离线 + 循环 + 对抗 + 代理格，标签二字", async () => {
   const tree = boot().render();
   await tick();
   assert.equal(tree.props["data-mode"], "think");
-  assert.equal(tree.children.length, 11, "3 档 + 隔离线 + 循环 + 隔离线 + 对抗 + 隔离线 + 检索 + 隔离线 + 代理");
+  assert.equal(tree.children.length, 11, "3 档 + 隔离线 + 循环 + 隔离线 + 对抗 + 隔离线 + 检索格 + 隔离线 + 代理格");
   assert.equal(tree.children[3].props.className, "dct-sep");
   assert.equal(tree.children[5].props.className, "dct-sep");
   assert.equal(tree.children[7].props.className, "dct-sep");
   assert.equal(tree.children[9].props.className, "dct-sep");
+  assert.equal(tree.children[8].children[0], "本地", "检索默认关 = 本地（v3.5.0 单格轮换）");
   const labels = tree.children.slice(0, 3).map((c) => c.children[0]);
   assert.deepEqual(labels, ["常规", "严格", "极致"]);
   assert.equal(tree.children[4].children[0], "循环");
   assert.equal(tree.children[6].children[0], "对抗");
-  assert.equal(tree.children[8].children[0], "检索");
-  assert.equal(tree.children[10].children[0], "代理");
+  assert.equal(tree.children[10].children[0], "默认", "代理默认关 = 默认（仍在末尾）");
   assert.equal(tree.props["data-agent"], "0", "代理默认关");
 });
 
@@ -224,6 +224,21 @@ test("兜底文案与宿主表逐字一致", () => {
   assert.deepEqual(FALLBACK_TITLES, TIER_TITLES);
 });
 
+test("老宿主只发两档标签：off 显示名用本地兜底，轮换格不空白", async () => {
+  const env = boot({
+    mode: "think",
+    level: "high",
+    plugin: "dsh-calibration",
+    route: { on: false, level: "high" },
+    labels: { route: { high: "增量", max: "全量" }, agent: { efficiency: "效率", performance: "性能" } },
+    titles: { route: { high: "增量说明", max: "全量说明" }, agent: { efficiency: "效率说明", performance: "性能说明" } },
+  });
+  const tree = env.render();
+  await tick(40);
+  assert.equal(tree.children[8].children[0], "本地", "缺 off 时不许变成空按钮");
+  assert.equal(tree.children[10].children[0], "默认");
+});
+
 test("样式：三色走变量（柔雾调）、隔离线、待生效小点存在", () => {
   const { CSS } = boot().mod.__internals;
   assert.match(CSS, /--dct-think:#877be3;--dct-loop:#66ae7c;--dct-counter:#da7f7f/);
@@ -248,8 +263,8 @@ test("样式：循环只换三级条，检索恒天蓝、对抗恒红", () => {
     null,
     "循环规则不许再写通用 .dct-cell[data-on='1']（特异性 0,5,0 会压过检索的 0,3,0）",
   );
-  assert.match(CSS, /\.dct-routecell\[data-on='1'\]\{background:var\(--dct-route\)/, "检索格用天蓝");
-  assert.match(CSS, /\.dct-route-toggle\[data-on='1'\]\{background:var\(--dct-route\)/, "检索开关用天蓝");
+  assert.match(CSS, /\.dct-cell\.dct-routecell\{background:var\(--dct-route\)/, "检索格用天蓝（三档恒亮）");
+  assert.equal(/dct-routecell\[data-on/.exec(CSS), null, "「本地」也保持颜色渲染：不许按 data-on 灭灯");
 });
 
 test("样式：循环 + 对抗 同开的雾橙也只定义一次，且只打在三级条的选中格上", () => {
@@ -504,48 +519,24 @@ test("两套都不认领：不连 SSE、点击只存本地，认领后补写一�
   assert.deepEqual(env.posts[0], { level: "off" });
 });
 
-test("检索关闭：不渲染检索三格，主条仍是 3 档 + 三开关", async () => {
+test("检索默认「本地」：只占一格，data-route=0", async () => {
   const tree = boot().render();
   await tick();
   assert.equal(tree.props["data-route"], "0");
+  assert.equal(tree.props["data-route-cycle"], "off");
   const routeCells = tree.children.filter((c) => String((c.props && c.props.className) || "").includes("dct-routecell"));
-  assert.equal(routeCells.length, 0);
+  assert.equal(routeCells.length, 1, "检索只占一格（v3.5.0）");
+  assert.equal(routeCells[0].children[0], "本地");
+  assert.equal(routeCells[0].props["data-on"], "0", "本地 = 不检索，不亮");
 });
 
-test("检索开启：最左两格是 增量/全量，与思考档并存", async () => {
-  const env = boot();
-  env.store.set(
-    "dsh-tier-mode:s-alpha",
-    JSON.stringify({ mode: "think", level: "max", route: { on: true, level: "high" } }),
-  );
-  const tree = env.render();
-  await tick();
-  assert.equal(tree.props["data-route"], "1");
-  assert.equal(tree.props["data-route-level"], "high");
-  assert.equal(tree.children.length, 14, "2 检索档 + 隔离线 + 3 思考档 + 隔离线 + 循环 + 隔离线 + 对抗 + 隔离线 + 检索 + 隔离线 + 代理");
-  assert.deepEqual(
-    tree.children.slice(0, 2).map((c) => c.children[0]),
-    ["增量", "全量"],
-    "v3.0.0：去掉「本地」档，关掉开关就是本地",
-  );
-  assert.equal(tree.children[2].props.className, "dct-sep");
-  assert.deepEqual(
-    tree.children.slice(3, 6).map((c) => c.children[0]),
-    ["常规", "严格", "极致"],
-    "检索开着也必须能改思考档",
-  );
-  assert.equal(tree.children[11].children[0], "检索");
-  assert.equal(tree.children[11].props["data-route-toggle"], "on");
-  assert.equal(tree.children[13].children[0], "代理");
-});
-
-test("点检索只提交 route.on，点全量只提交 route.level", async () => {
+test("检索格轮换：本地 → 增量 → 全量 → 本地，每下只提交变的那一维", async () => {
   const env = boot();
   const tree = env.render();
   await tick();
-  tree.children[8].props.onClick(); // 检索开关（关态：0-2 档 / 3 sep / 4 循环 / 5 sep / 6 对抗 / 7 sep / 8 检索）
+  tree.children[8].props.onClick(); // 本地 → 增量（档位本来就是 high，不必再写 level）
   await tick();
-  assert.deepEqual(env.posts.at(-1), { route: { on: true } }, "切开关不许顺手改档位/模式");
+  assert.deepEqual(env.posts.at(-1), { route: { on: true } }, "档位没变就只提交 on");
 
   env.store.set(
     "dsh-tier-mode:s-alpha",
@@ -553,12 +544,39 @@ test("点检索只提交 route.on，点全量只提交 route.level", async () =>
   );
   const onTree = env.render();
   await tick();
-  onTree.children[1].props.onClick(); // 全量（开态最左两格：0 增量 / 1 全量）
+  assert.equal(onTree.props["data-route"], "1");
+  assert.equal(onTree.props["data-route-cycle"], "high");
+  assert.equal(onTree.children[8].children[0], "增量");
+  onTree.children[8].props.onClick(); // 增量 → 全量
   await tick();
   assert.deepEqual(env.posts.at(-1), { route: { level: "max" } }, "换档不许顺手切换开关");
+
+  env.store.set(
+    "dsh-tier-mode:s-alpha",
+    JSON.stringify({ mode: "think", level: "high", route: { on: true, level: "max" } }),
+  );
+  const maxTree = env.render();
+  await tick();
+  assert.equal(maxTree.children[8].children[0], "全量");
+  maxTree.children[8].props.onClick(); // 全量 → 本地
+  await tick();
+  assert.deepEqual(env.posts.at(-1), { route: { on: false } }, "只关，不写档位");
 });
 
-test("检索 + 循环 + 对抗同开：四段各亮各的，data-route 与 data-mix 互不干扰", async () => {
+test("检索格：从「本地」再点必须回到增量档，哪怕上次停在全量档", async () => {
+  const env = boot();
+  env.store.set(
+    "dsh-tier-mode:s-alpha",
+    JSON.stringify({ mode: "think", level: "high", route: { on: false, level: "max" } }),
+  );
+  const tree = env.render();
+  await tick();
+  tree.children[8].props.onClick(); // 本地 → 增量（不是续着 max）
+  await tick();
+  assert.deepEqual(env.posts.at(-1), { route: { on: true, level: "high" } }, "轮换顺序固定：本地 → 增量");
+});
+
+test("检索 + 循环 + 对抗同开：各亮各的，data-route 与 data-mix 互不干扰", async () => {
   const env = boot();
   env.store.set(
     "dsh-tier-mode:s-alpha",
@@ -569,11 +587,11 @@ test("检索 + 循环 + 对抗同开：四段各亮各的，data-route 与 data-
   assert.equal(tree.props["data-mode"], "loop");
   assert.equal(tree.props["data-route"], "1");
   assert.equal(tree.props["data-mix"], "1");
-  assert.equal(tree.children.length, 14);
-  assert.equal(tree.children[1].props["data-on"], "1", "全量档亮");
-  assert.equal(tree.children[7].props["data-mode-toggle"], "loop");
-  assert.equal(tree.children[9].props["data-counter-toggle"], "on");
-  assert.equal(tree.children[11].props["data-route-toggle"], "on");
+  assert.equal(tree.children.length, 11, "收成轮换格后节点数恒为 11（不再随开关增减）");
+  assert.equal(tree.children[8].children[0], "全量");
+  assert.equal(tree.children[8].props["data-on"], "1", "全量档亮");
+  assert.equal(tree.children[4].props["data-mode-toggle"], "loop");
+  assert.equal(tree.children[6].props["data-counter-toggle"], "on");
 });
 
 test("检索档位坏值退回默认「增量」", async () => {
@@ -587,89 +605,57 @@ test("检索档位坏值退回默认「增量」", async () => {
   assert.equal(tree.props["data-route-level"], "high");
 });
 
-test("样式：天蓝变量只定义一次，且只打在检索格与检索开关上", () => {
+test("样式：天蓝变量只定义一次，只打在检索格上", () => {
   const { CSS } = boot().mod.__internals;
   assert.equal((CSS.match(/--dct-route:/g) || []).length, 1, "变量只能定义一次");
   assert.ok(CSS.includes("#3a9ad9"), "天蓝取 #3a9ad9");
-  assert.ok(CSS.includes(".dct-routecell[data-on='1']{background:var(--dct-route)"), "检索格用天蓝");
-  assert.ok(CSS.includes(".dct-route-toggle[data-on='1']{background:var(--dct-route)"), "检索开关用天蓝");
+  assert.ok(CSS.includes(".dct-cell.dct-routecell{background:var(--dct-route)"), "检索格用天蓝，且本地也恒亮");
+  assert.equal(/dct-routecell\[data-on/.exec(CSS), null, "「本地」也保持颜色渲染：不许按 data-on 灭灯");
 });
 
-test("代理开（宽屏 + 检索关）：出现 效率 / 性能 两格，data-agent=1", async () => {
-  const env = boot({ mode: "think", level: "high", plugin: "dsh-calibration" });
-  env.store.set(
-    "dsh-tier-mode:s-alpha",
-    JSON.stringify({ mode: "think", level: "high", agent: { on: true, profile: "performance" } }),
-  );
-  const tree = env.render();
+test("代理默认「默认」：只占一格，data-agent=0", async () => {
+  const tree = boot().render();
   await tick();
-  assert.equal(tree.props["data-agent"], "1");
-  assert.equal(tree.props["data-agent-profile"], "performance");
-  const profileCells = tree.children.filter((c) => String((c.props && c.props.className) || "").includes("dct-agentcell"));
-  assert.equal(profileCells.length, 2, "宽屏 + 检索关 → 两格并列");
-  assert.deepEqual(
-    profileCells.map((c) => c.children[0]),
-    ["效率", "性能"],
-  );
-  assert.equal(profileCells[1].props["data-on"], "1", "性能档亮");
-  assert.equal(profileCells[0].props["data-agent-compact"], undefined, "两格形态不带 compact 标记");
+  assert.equal(tree.props["data-agent"], "0");
+  assert.equal(tree.props["data-agent-cycle"], "off");
+  const agentCells = tree.children.filter((c) => String((c.props && c.props.className) || "").includes("dct-agentcell"));
+  assert.equal(agentCells.length, 1, "代理只占一格（v3.5.0）");
+  assert.equal(agentCells[0].children[0], "默认");
 });
 
-test("代理开 + 窄屏：效率/性能收成一格轮换（省 37px）", async () => {
-  const env = boot(undefined, { innerWidth: 1000 });
-  env.store.set(
-    "dsh-tier-mode:s-alpha",
-    JSON.stringify({ mode: "think", level: "high", agent: { on: true, profile: "efficiency" } }),
-  );
-  const tree = env.render();
-  await tick();
-  const profileCells = tree.children.filter((c) => String((c.props && c.props.className) || "").includes("dct-agentcell"));
-  assert.equal(profileCells.length, 1, "窄屏降级为一格");
-  assert.equal(profileCells[0].props["data-agent-compact"], "1");
-  assert.equal(profileCells[0].children[0], "效率");
-});
+test("代理格轮换：默认 → 效率 → 性能 → 默认，宽窄屏一个形态", async () => {
+  for (const innerWidth of [1400, 1000]) {
+    const env = boot(undefined, { innerWidth });
+    const tree = env.render();
+    await tick();
+    tree.children[10].props.onClick(); // 默认 → 效率（档位本来就是 efficiency）
+    await tick();
+    assert.deepEqual(env.posts.at(-1), { agent: { on: true } }, `宽 ${innerWidth}：只提交 on`);
 
-test("代理开 + 检索开：两格降级为一格（避免 515px 全宽）", async () => {
-  const env = boot();
-  env.store.set(
-    "dsh-tier-mode:s-alpha",
-    JSON.stringify({
-      mode: "think",
-      level: "high",
-      route: { on: true, level: "high" },
-      agent: { on: true, profile: "performance" },
-    }),
-  );
-  const tree = env.render();
-  await tick();
-  const profileCells = tree.children.filter((c) => String((c.props && c.props.className) || "").includes("dct-agentcell"));
-  assert.equal(profileCells.length, 1);
-  assert.equal(profileCells[0].props["data-agent-compact"], "1");
-  assert.equal(profileCells[0].children[0], "性能");
-});
+    env.store.set(
+      "dsh-tier-mode:s-alpha",
+      JSON.stringify({ mode: "think", level: "high", agent: { on: true, profile: "efficiency" } }),
+    );
+    const onTree = env.render();
+    await tick();
+    assert.equal(onTree.props["data-agent"], "1");
+    assert.equal(onTree.props["data-agent-cycle"], "efficiency");
+    assert.equal(onTree.children[10].children[0], "效率", `宽 ${innerWidth}：一个形态，不再分宽窄屏`);
+    onTree.children[10].props.onClick(); // 效率 → 性能
+    await tick();
+    assert.deepEqual(env.posts.at(-1), { agent: { profile: "performance" } }, "换档不许顺手切换开关");
 
-test("点代理只提交 agent.on；点性能只提交 agent.profile", async () => {
-  const env = boot();
-  const tree = env.render();
-  await tick();
-  const agentToggle = tree.children.find((c) => String((c.props && c.props.className) || "").includes("dct-agent-toggle"));
-  assert.equal(agentToggle.children[0], "代理");
-  agentToggle.props.onClick();
-  await tick();
-  assert.deepEqual(env.posts.at(-1), { agent: { on: true } }, "切开关不许顺手改档位/模式/检索");
-
-  env.store.set(
-    "dsh-tier-mode:s-alpha",
-    JSON.stringify({ mode: "think", level: "high", agent: { on: true, profile: "efficiency" } }),
-  );
-  const onTree = env.render();
-  await tick();
-  const perf = onTree.children.find(
-    (c) => String((c.props && c.props.className) || "").includes("dct-agentcell") && c.props["data-agent-profile"] === "performance",
-  );
-  perf.props.onClick();
-  await tick();
-  assert.deepEqual(env.posts.at(-1), { agent: { profile: "performance" } }, "换档不许顺手切换开关");
+    env.store.set(
+      "dsh-tier-mode:s-alpha",
+      JSON.stringify({ mode: "think", level: "high", agent: { on: true, profile: "performance" } }),
+    );
+    const maxTree = env.render();
+    await tick();
+    assert.equal(maxTree.children[10].children[0], "性能");
+    maxTree.children[10].props.onClick(); // 性能 → 默认
+    await tick();
+    assert.deepEqual(env.posts.at(-1), { agent: { on: false } }, "只关，不写档位");
+  }
 });
 
 test("代理档坏值退回默认「效率」", async () => {
@@ -683,10 +669,10 @@ test("代理档坏值退回默认「效率」", async () => {
   assert.equal(tree.props["data-agent-profile"], "efficiency");
 });
 
-test("样式：代理紫红变量只定义一次，只打在代理格与开关上", () => {
+test("样式：代理墨绿变量只定义一次，只打在代理格上", () => {
   const { CSS } = boot().mod.__internals;
   assert.equal((CSS.match(/--dct-agent:/g) || []).length, 1, "变量只能定义一次");
-  assert.ok(CSS.includes("#b06fd0"), "代理取紫红 #b06fd0");
-  assert.ok(CSS.includes(".dct-agent-toggle[data-on='1']{background:var(--dct-agent)"), "代理开关用紫红");
-  assert.ok(CSS.includes(".dct-agentcell[data-on='1']{background:var(--dct-agent)"), "效率/性能格用紫红");
+  assert.ok(CSS.includes("#24543f"), "代理取墨绿 #24543f");
+  assert.ok(CSS.includes(".dct-cell.dct-agentcell{background:var(--dct-agent)"), "代理格用墨绿，且默认也恒亮");
+  assert.equal(/dct-agentcell\[data-on/.exec(CSS), null, "「默认」也保持颜色渲染：不许按 data-on 灭灯");
 });

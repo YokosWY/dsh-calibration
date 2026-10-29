@@ -1,5 +1,36 @@
 # 变更记录
 
+## 3.5.0 — 2026-10-29
+- **检索与代理各收成一个轮换格**（用户口径 2026-10-29「选项格少一点」）：主条从「本地/增量/全量 + 三档 + 循环 + 对抗 + 代理/效率/性能」改成固定 11 节点——`常规 严格 极致 ‖ 循环 对抗 ‖ [检索格] [代理格]`。
+  - 检索格点一下 **本地 → 增量 → 全量 → 本地**；「本地」= `route.on=false`（原开关的关），只做显示名，不进 `ROUTE_LEVELS` / `ROUTE_PLAN`。
+  - 代理格点一下 **默认 → 效率 → 性能 → 默认**；「默认」= `agent.on=false`，同样只做显示名。
+  - 两个轮换格都放在**选项条末尾**（用户口径 2026-10-29 第二条：「检索和代理两个开关都放在选项条最后」），顺序为 三档 → 循环 → 对抗 → 检索 → 代理。
+  - 状态模型不变（`route{on,level}` / `agent{on,profile}`，SCHEMA 仍是 9），老状态文件无需迁移。
+- **两格恒亮**（用户口径 2026-10-29「本地的时候也保持颜色渲染，默认也是」）：检索格三档恒天蓝、代理格三档恒墨绿，`data-on` / `data-route` / `data-agent` 只表状态、不再控制配色；CSS 用 `.dct-cell.dct-routecell`（0,4,0）稳压通用选中规则，不依赖源序。
+- **代理色由紫红改墨绿**（用户口径 2026-10-29「颜色改为墨绿」）：`--dct-agent` 从 `#b06fd0` 换成 `#24543f`（白字对比 ≈8.7，比三档更深，靠明度差与循环雾绿 `#66ae7c` 分开），内描边同步 `rgba(36,84,63,.45)`。
+- **删掉宽窄屏两套形态**：`WIDE_MIN` 与 `data-agent-compact` 降级分支一并删除（代理已是一格，不再需要 37px 的降级）；节点数不再随开关增减（旧版 11/14 两态）。
+- **轮换只提交变的那一维**：档位没变就只提交 `on`，换档不动开关；从「本地」出发永远落到增量档，不续上次的全量档。
+- **悬停解释**：只有两个轮换格带 title（说明「点一下切到哪」）；档位格、循环、对抗仍无 title。
+- **对外快照更老实**：`routePlan(false, …)` 的 `label` 由「档位名」改为「本地」，与界面显示一致。
+- 测试：客户端 39 项（含轮换顺序、最小提交、末尾顺序、恒亮、宽窄屏同形），全套 136 项；README / 使用说明 md+docx 同步。
+
+## 3.4.0 — 2026-10-28
+- **定语义：代理开关 = 强化开关**。关 = **不强化**（`agent_delegate` 不挑更强 route，沿用主模型的 provider/model；拿不到主模型信息才退回效率档并说明）；开 = 强化，再选强度。
+- **效率档改成「强化一档 + 性价比」**：候选只留分数**严格高于主模型**的，再挑其中**档位最低**的那一档（够用就停、不跳级），同档取分最高、同分按 `cost` 取代价低的。3.3.1 的「低档优先 + 最低 effort」推翻——那等于不强化甚至降质。
+- **性能档明确为「绝对质量」**：全池取领域分最高 + 模型声明的最高推理等级，用于用户明确在意质量的任务。
+- **新增 `cost` 相对代价序**（`core.js` 的 `CAPABILITIES`）：宿主不给价格，只能人工排序（1 最便宜 / 5 最贵，`claude-opus` 5、`grok` 4、`claude-sonnet|fable` 3、`deepseek-v4|flash` 1，未知 3），可逐条覆盖。只在**效率档**的同分比较里生效（`better()`）；性能档用 `betterQuality()`，同分只看窗口与名序，不因便宜而降级。
+- **效率档 effort 回到模型默认档**：模型已经升了一档，推理强度不再砍到底；`off`/`disabled` 不算可跑档。
+- 文案同步（宿主 `TITLES`、客户端 `client.js` 的兜底文案、README、使用说明 md/docx）。
+- 测试 136 → 137（新增：代理关走主模型；效率档=严格强于基线 + 同档取便宜 + 无基线不猜 high）。「效率取最低档」的旧契约改回「取默认档」。
+
+## 3.3.1 — 2026-10-28
+- **修：`writing` / `toolUse` 两列能力分恒为 `undefined`**。`scoreRoute` 原来只遍历 `Object.values(AGENT_DOMAINS)`，而那张表只用了 `code / reasoning / longContext` 三个域（模块映射本来就不需要另两列）；但 `agent_delegate` 的 `domain` 参数对外暴露 5 个域，传 `writing`/`toolUse` 时 `better()` 的比较谓词恒真/恒假，挑中哪条**不可预测**。改法：新增 `core.js` 的 `AGENT_SCORE_DOMAINS`（5 域），计分与挑选用同一张表，一处定义。
+- **修：`counter` 的「隔离 high」是假的**。主模型 `deepseek-official/*`、counter 挑 `deepseek-account/*` 只换了 provider 字符串，同厂商同族，却被判 `isolation=high`。改法：`pickRoute` 用 `familyOf(mainModel)` 比对族名，异 provider 但同族 → `mid`，异族才 `high`。
+- **改：效率档真正按「性价比」挑**。旧逻辑「low+mid 池里挑分最高」实测挑到 `deepseek-account/deepseek-v4-pro`（mid 档），且 effort 取模型默认档（deepseek 默认 `high`）——叫效率、跑最贵。新逻辑：先只在 `low` 档（flash 级）里挑，没有才退 low+mid，再没有才不限；effort 取**最低可用档**（跳过 `off`/`disabled`），没有低档才回默认。
+- **补：`contextWindow` 采集**。`llm-pi-ai` 的 `listModels` 不带窗口，`better()` 的「窗口大者优先」永远 `0 == 0`。`resolveRoutes` 现在会在 `resolveModelInfo` 报出 `contextWindow` 时补进 route；另在 `calibration-models.json` 的 `models` 里补上配置能确认的两条（`claude-opus-5-5` / `claude-sonnet-5-5` = 1M，取自 profile 的 `llm-pi-ai` 配置）。
+- 测试 134 → 136（新增：5 域计分与 `domain=writing|toolUse` 可挑、同族假隔离降为 mid；「效率取默认档」的旧契约改为「取最低可用档」）。
+- 注意：插件在进程启动时加载，**改完要重启 DSH 才生效**。
+
 ## 3.3.0 — 2026-10-28
 - **免费线名单可配**：内置 `FREE_LINE_PROVIDERS` 只是默认值，`calibration-models.json` 顶层加 `providers` 即可增删，不用改代码也不用等发版：
   ```json

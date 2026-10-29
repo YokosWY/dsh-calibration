@@ -107,12 +107,14 @@ test("文案统一叫「五模式」：现行文档不再出现「双模式 / �
   assert.match(read("docs", "demo.svg"), /同框五模式/, "demo 标题要写「同框五模式」");
 });
 
-test("检索两档：标签、说明、执行计划三张表与 ROUTE_LEVELS 同键", () => {
-  assert.deepEqual(Object.keys(LABELS.route).sort(), [...ROUTE_LEVELS].sort(), "LABELS.route 的键必须与 ROUTE_LEVELS 一致");
-  assert.deepEqual(Object.keys(TITLES.route).sort(), [...ROUTE_LEVELS].sort(), "TITLES.route 的键必须与 ROUTE_LEVELS 一致");
+test("检索两档：标签表多一个 off 显示名，执行计划仍只有两档", () => {
+  // v3.5.0：检索收成一个轮换格「本地 → 增量 → 全量」，off 只是显示名，不是可提交的档位
+  assert.deepEqual(Object.keys(LABELS.route).sort(), ["high", "max", "off"], "LABELS.route = 两档 + off 显示名");
+  assert.deepEqual(Object.keys(TITLES.route).sort(), ["high", "max", "off"], "TITLES.route = 两档 + off 显示名");
   assert.deepEqual(Object.keys(ROUTE_PLAN).sort(), [...ROUTE_LEVELS].sort(), "ROUTE_PLAN 的键必须与 ROUTE_LEVELS 一致");
-  assert.deepEqual([...ROUTE_LEVELS], ["high", "max"], "v3.0.0：去掉「本地」档——关掉开关就是本地");
-  assert.equal("off" in ROUTE_PLAN, false, "off 不再是一档，关 = 不检索");
+  assert.deepEqual([...ROUTE_LEVELS], ["high", "max"], "可提交的检索档只有两档");
+  assert.equal(LABELS.route.off, "本地", "轮换格第一下是「本地」");
+  assert.equal("off" in ROUTE_PLAN, false, "off 不是一档：关 = 不检索，没有 plan");
   assert.equal(ROUTE_PLAN.high.network, true);
   assert.equal(ROUTE_PLAN.max.network, true);
   // 全量不设读取上限（用户口径 2026-10-27），降本靠「只跑首轮」而不是砍读取
@@ -120,10 +122,12 @@ test("检索两档：标签、说明、执行计划三张表与 ROUTE_LEVELS 同
   assert.ok(ROUTE_PLAN.max.guard.includes("只跑首轮"), ROUTE_PLAN.max.guard);
 });
 
-test("代理两档：标签、说明与 AGENT_PROFILES 同键，关着只回 on:false", () => {
-  assert.deepEqual(Object.keys(LABELS.agent).sort(), [...AGENT_PROFILES].sort());
-  assert.deepEqual(Object.keys(TITLES.agent).sort(), [...AGENT_PROFILES].sort());
+test("代理两档：标签表多一个 off 显示名，关着只回 on:false", () => {
+  assert.deepEqual(Object.keys(LABELS.agent).sort(), ["efficiency", "off", "performance"]);
+  assert.deepEqual(Object.keys(TITLES.agent).sort(), ["efficiency", "off", "performance"]);
   assert.deepEqual(Object.keys(AGENT_PLAN).sort(), [...AGENT_PROFILES].sort());
+  assert.equal(LABELS.agent.off, "默认", "轮换格第一下是「默认」");
+  assert.equal("off" in AGENT_PLAN, false, "off 不是一档");
   assert.deepEqual(DEFAULT_AGENT, { on: false, profile: "efficiency" });
   const off = agentPlan(false, "performance");
   assert.deepEqual(off, { on: false }, "关着时只回 on:false，不占每步字");
@@ -135,12 +139,12 @@ test("代理两档：标签、说明与 AGENT_PROFILES 同键，关着只回 on:
   assert.equal(typeof on.domains.executor, "string");
 });
 
-test("检索开关默认关、默认档位「增量」，关着时不发空计划", () => {
+test("检索开关默认关（显示「本地」），关着时不发空计划", () => {
   assert.deepEqual(DEFAULT_ROUTE, { on: false, level: "high" });
   const off = routePlan(false, "max");
   assert.equal(off.on, false);
   assert.equal(off.plan, null, "关着时 plan 必须是 null");
-  assert.equal(off.label, "全量", "关着也带档位名，客户端不用另算");
+  assert.equal(off.label, "本地", "关着时对外也报「本地」，跟轮换格显示一致");
   const on = routePlan(true, "max");
   assert.equal(on.plan, ROUTE_PLAN.max);
   assert.equal(on.label, "全量");

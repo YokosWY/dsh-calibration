@@ -369,12 +369,13 @@ test("SSE 只推同一会话，帧里带 pending/turnLocked", async () => {
   }
 });
 
-test("检索开关：默认关、档位「增量」，/state 带两档与标签", async () => {
+test("检索开关：默认关（显示「本地」），/state 带两档与标签", async () => {
   rmSync(statePath, { force: true });
   const s = await (await get("s-route-default")).json();
   assert.deepEqual(s.route, { on: false, level: "high" }, "默认关，档位记「增量」");
-  assert.deepEqual(s.routeLevels, ["high", "max"], "v3.0.0：去掉「本地」档，关掉就是不检索");
-  assert.deepEqual(s.labels.route, { high: "增量", max: "全量" });
+  assert.deepEqual(s.routeLevels, ["high", "max"], "可提交的检索档是两档；off = 本地，只是轮换格的显示名");
+  assert.deepEqual(s.labels.route, { off: "本地", high: "增量", max: "全量" });
+  assert.deepEqual(s.labels.agent, { off: "默认", efficiency: "效率", performance: "性能" });
   assert.deepEqual(s.defaultRoute, { on: false, level: "high" });
   assert.deepEqual(s.agentProfiles, ["efficiency", "performance"]);
   assert.deepEqual(s.defaultAgent, { on: false, profile: "efficiency" });

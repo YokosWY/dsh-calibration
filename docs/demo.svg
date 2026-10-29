@@ -1,98 +1,122 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="360" viewBox="0 0 760 360" role="img" aria-label="dsh-calibration-tier 同框五模式演示：思考 / 循环 / 对抗 / 检索 / 代理，检索开启时左侧多出增量/全量两档，代理开启时右侧多出效率/性能">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="400" viewBox="0 0 760 400" role="img" aria-label="dsh-calibration-tier 同框五模式演示：思考 / 循环 / 对抗 / 检索 / 代理；检索与代理各是一个轮换格，排在选项条末尾且恒亮">
   <defs>
     <style>
       .title { font: 600 18px/1.2 "Segoe UI", "Microsoft YaHei", sans-serif; fill: #e8e8ef; }
       .sub { font: 400 12px/1.2 "Segoe UI", "Microsoft YaHei", sans-serif; fill: #9aa0b4; }
       .cell { font: 500 12px/1 "Segoe UI", "Microsoft YaHei", sans-serif; fill: #c9c9d6; }
       .on { fill: #ffffff; font-weight: 600; }
-      .mode { font: 500 12px/1 "Segoe UI", "Microsoft YaHei", sans-serif; fill: #c9c9d6; }
       .foot { font: 400 11px/1.2 "Segoe UI", "Microsoft YaHei", sans-serif; fill: #8f94a8; }
     </style>
   </defs>
-  <rect width="760" height="360" fill="#14151c"/>
+  <rect width="760" height="400" fill="#14151c"/>
   <text class="title" x="32" y="40">dsh-calibration-tier · 同框五模式</text>
-  <text class="sub" x="32" y="62">思考 ⇄ 循环 互斥切换；「对抗」「检索」「代理」都可叠加；检索关 = 本地，代理关 = 官方默认</text>
+  <text class="sub" x="32" y="62">思考 ⇄ 循环 互斥切换；「对抗」可叠加；检索与代理各一格，排在最后，点一下走一档</text>
+  <text class="sub" x="32" y="110">思考</text>
+    <rect x="84" y="92" width="62" height="28" rx="14" fill="none" stroke="#877be3" stroke-opacity=".45"
+/>
+    <text class="cell" x="115" y="110" text-anchor="middle">常规</text>
+    <rect x="150" y="92" width="62" height="28" rx="14" fill="#877be3"
+/>
+    <text class="cell on" x="181" y="110" text-anchor="middle">严格</text>
+    <rect x="216" y="92" width="62" height="28" rx="14" fill="none" stroke="#877be3" stroke-opacity=".45"
+/>
+    <text class="cell" x="247" y="110" text-anchor="middle">极致</text>
+    <rect x="290" y="97" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="298" y="92" width="62" height="28" rx="14" fill="none" stroke="#66ae7c" stroke-opacity=".45"
+/>
+    <text class="cell" x="329" y="110" text-anchor="middle">循环</text>
+    <rect x="372" y="97" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="380" y="92" width="62" height="28" rx="14" fill="none" stroke="#da7f7f" stroke-opacity=".45"
+/>
+    <text class="cell" x="411" y="110" text-anchor="middle">对抗</text>
+    <rect x="454" y="97" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="462" y="92" width="62" height="28" rx="14" fill="#3a9ad9"
+/>
+    <text class="cell on" x="493" y="110" text-anchor="middle">本地</text>
+    <rect x="536" y="97" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="544" y="92" width="62" height="28" rx="14" fill="#24543f"
+/>
+    <text class="cell on" x="575" y="110" text-anchor="middle">默认</text>
+  <text class="sub" x="32" y="166">循环+对抗</text>
+    <rect x="84" y="148" width="62" height="28" rx="14" fill="none" stroke="#cf8a4a" stroke-opacity=".45"
+/>
+    <text class="cell" x="115" y="166" text-anchor="middle">轻量</text>
+    <rect x="150" y="148" width="62" height="28" rx="14" fill="#cf8a4a"
+/>
+    <text class="cell on" x="181" y="166" text-anchor="middle">交付</text>
+    <rect x="216" y="148" width="62" height="28" rx="14" fill="none" stroke="#cf8a4a" stroke-opacity=".45"
+/>
+    <text class="cell" x="247" y="166" text-anchor="middle">极致</text>
+    <rect x="290" y="153" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="298" y="148" width="62" height="28" rx="14" fill="#66ae7c"
+/>
+    <text class="cell on" x="329" y="166" text-anchor="middle">循环</text>
+    <rect x="372" y="153" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="380" y="148" width="62" height="28" rx="14" fill="#da7f7f"
+/>
+    <text class="cell on" x="411" y="166" text-anchor="middle">对抗</text>
+    <rect x="454" y="153" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="462" y="148" width="62" height="28" rx="14" fill="#3a9ad9"
+/>
+    <text class="cell on" x="493" y="166" text-anchor="middle">本地</text>
+    <rect x="536" y="153" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="544" y="148" width="62" height="28" rx="14" fill="#24543f"
+/>
+    <text class="cell on" x="575" y="166" text-anchor="middle">默认</text>
+  <text class="sub" x="32" y="222">检索·全量</text>
+    <rect x="84" y="204" width="62" height="28" rx="14" fill="none" stroke="#877be3" stroke-opacity=".45"
+/>
+    <text class="cell" x="115" y="222" text-anchor="middle">常规</text>
+    <rect x="150" y="204" width="62" height="28" rx="14" fill="#877be3"
+/>
+    <text class="cell on" x="181" y="222" text-anchor="middle">严格</text>
+    <rect x="216" y="204" width="62" height="28" rx="14" fill="none" stroke="#877be3" stroke-opacity=".45"
+/>
+    <text class="cell" x="247" y="222" text-anchor="middle">极致</text>
+    <rect x="290" y="209" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="298" y="204" width="62" height="28" rx="14" fill="none" stroke="#66ae7c" stroke-opacity=".45"
+/>
+    <text class="cell" x="329" y="222" text-anchor="middle">循环</text>
+    <rect x="372" y="209" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="380" y="204" width="62" height="28" rx="14" fill="none" stroke="#da7f7f" stroke-opacity=".45"
+/>
+    <text class="cell" x="411" y="222" text-anchor="middle">对抗</text>
+    <rect x="454" y="209" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="462" y="204" width="62" height="28" rx="14" fill="#3a9ad9"
+/>
+    <text class="cell on" x="493" y="222" text-anchor="middle">全量</text>
+    <rect x="536" y="209" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="544" y="204" width="62" height="28" rx="14" fill="#24543f"
+/>
+    <text class="cell on" x="575" y="222" text-anchor="middle">默认</text>
+  <text class="sub" x="32" y="278">代理·性能</text>
+    <rect x="84" y="260" width="62" height="28" rx="14" fill="none" stroke="#877be3" stroke-opacity=".45"
+/>
+    <text class="cell" x="115" y="278" text-anchor="middle">常规</text>
+    <rect x="150" y="260" width="62" height="28" rx="14" fill="#877be3"
+/>
+    <text class="cell on" x="181" y="278" text-anchor="middle">严格</text>
+    <rect x="216" y="260" width="62" height="28" rx="14" fill="none" stroke="#877be3" stroke-opacity=".45"
+/>
+    <text class="cell" x="247" y="278" text-anchor="middle">极致</text>
+    <rect x="290" y="265" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="298" y="260" width="62" height="28" rx="14" fill="none" stroke="#66ae7c" stroke-opacity=".45"
+/>
+    <text class="cell" x="329" y="278" text-anchor="middle">循环</text>
+    <rect x="372" y="265" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="380" y="260" width="62" height="28" rx="14" fill="none" stroke="#da7f7f" stroke-opacity=".45"
+/>
+    <text class="cell" x="411" y="278" text-anchor="middle">对抗</text>
+    <rect x="454" y="265" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="462" y="260" width="62" height="28" rx="14" fill="#3a9ad9"
+/>
+    <text class="cell on" x="493" y="278" text-anchor="middle">本地</text>
+    <rect x="536" y="265" width="1" height="18" fill="#7f7f8a" fill-opacity=".38"/>
+    <rect x="544" y="260" width="62" height="28" rx="14" fill="#24543f"
+/>
+    <text class="cell on" x="575" y="278" text-anchor="middle">性能</text>
 
-  <text class="sub" x="32" y="107">思考</text>
-  <g>
-    <rect x="84" y="88" width="60" height="28" rx="14" fill="none" stroke="#877be3" stroke-opacity=".45"/>
-    <text class="cell" x="114" y="107" text-anchor="middle">常规</text>
-    <rect x="148" y="88" width="60" height="28" rx="14" fill="#877be3"/>
-    <text class="cell on" x="178" y="107" text-anchor="middle">严格</text>
-    <rect x="212" y="88" width="60" height="28" rx="14" fill="none" stroke="#877be3" stroke-opacity=".45"/>
-    <text class="cell" x="242" y="107" text-anchor="middle">极致</text>
-    <line x1="276" y1="92" x2="276" y2="112" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="284" y="88" width="60" height="28" rx="14" fill="none" stroke="#7f7f8a" stroke-opacity=".45"/>
-    <text class="cell" x="314" y="107" text-anchor="middle">循环</text>
-    <line x1="348" y1="92" x2="348" y2="112" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="356" y="88" width="60" height="28" rx="14" fill="none" stroke="#da7f7f" stroke-opacity=".45"/>
-    <text class="cell" x="386" y="107" text-anchor="middle">对抗</text>
-    <line x1="420" y1="92" x2="420" y2="112" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="428" y="88" width="60" height="28" rx="14" fill="none" stroke="#3a9ad9" stroke-opacity=".45"/>
-    <text class="cell" x="458" y="107" text-anchor="middle">检索</text>
-    <line x1="492" y1="92" x2="492" y2="112" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="500" y="88" width="60" height="28" rx="14" fill="none" stroke="#b06fd0" stroke-opacity=".45"/>
-    <text class="cell" x="530" y="107" text-anchor="middle">代理</text>
-  </g>
-  <text class="sub" x="32" y="159">循环</text>
-  <g>
-    <rect x="84" y="140" width="60" height="28" rx="14" fill="none" stroke="#cf8a4a" stroke-opacity=".45"/>
-    <text class="cell" x="114" y="159" text-anchor="middle">轻量</text>
-    <rect x="148" y="140" width="60" height="28" rx="14" fill="#cf8a4a"/>
-    <text class="cell on" x="178" y="159" text-anchor="middle">交付</text>
-    <rect x="212" y="140" width="60" height="28" rx="14" fill="none" stroke="#cf8a4a" stroke-opacity=".45"/>
-    <text class="cell" x="242" y="159" text-anchor="middle">极致</text>
-    <line x1="276" y1="144" x2="276" y2="164" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="284" y="140" width="60" height="28" rx="14" fill="#66ae7c"/>
-    <text class="cell on" x="314" y="159" text-anchor="middle">循环</text>
-    <line x1="348" y1="144" x2="348" y2="164" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="356" y="140" width="60" height="28" rx="14" fill="none" stroke="#da7f7f" stroke-opacity=".45"/>
-    <text class="cell" x="386" y="159" text-anchor="middle">对抗</text>
-    <line x1="420" y1="144" x2="420" y2="164" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="428" y="140" width="60" height="28" rx="14" fill="none" stroke="#3a9ad9" stroke-opacity=".45"/>
-    <text class="cell" x="458" y="159" text-anchor="middle">检索</text>
-    <line x1="492" y1="144" x2="492" y2="164" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="500" y="140" width="60" height="28" rx="14" fill="none" stroke="#b06fd0" stroke-opacity=".45"/>
-    <text class="cell" x="530" y="159" text-anchor="middle">代理</text>
-  </g>
-  <text class="sub" x="32" y="211">检索开</text>
-  <g>
-    <rect x="84" y="192" width="60" height="28" rx="14" fill="#3a9ad9"/>
-    <text class="cell on" x="114" y="211" text-anchor="middle">增量</text>
-    <rect x="148" y="192" width="60" height="28" rx="14" fill="none" stroke="#3a9ad9" stroke-opacity=".45"/>
-    <text class="cell" x="178" y="211" text-anchor="middle">全量</text>
-    <line x1="212" y1="196" x2="212" y2="216" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="220" y="192" width="60" height="28" rx="14" fill="none" stroke="#877be3" stroke-opacity=".45"/>
-    <text class="cell" x="250" y="211" text-anchor="middle">常规</text>
-    <rect x="284" y="192" width="60" height="28" rx="14" fill="#877be3"/>
-    <text class="cell on" x="314" y="211" text-anchor="middle">严格</text>
-    <rect x="348" y="192" width="60" height="28" rx="14" fill="none" stroke="#877be3" stroke-opacity=".45"/>
-    <text class="cell" x="378" y="211" text-anchor="middle">极致</text>
-    <line x1="412" y1="196" x2="412" y2="216" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="420" y="192" width="60" height="28" rx="14" fill="none" stroke="#7f7f8a" stroke-opacity=".45"/>
-    <text class="cell" x="450" y="211" text-anchor="middle">循环</text>
-    <line x1="484" y1="196" x2="484" y2="216" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="492" y="192" width="60" height="28" rx="14" fill="none" stroke="#da7f7f" stroke-opacity=".45"/>
-    <text class="cell" x="522" y="211" text-anchor="middle">对抗</text>
-    <line x1="556" y1="196" x2="556" y2="216" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="564" y="192" width="60" height="28" rx="14" fill="#3a9ad9"/>
-    <text class="cell on" x="594" y="211" text-anchor="middle">检索</text>
-    <line x1="628" y1="196" x2="628" y2="216" stroke="#7f7f8a" stroke-opacity=".6"/>
-    <rect x="636" y="192" width="60" height="28" rx="14" fill="none" stroke="#b06fd0" stroke-opacity=".45"/>
-    <text class="cell" x="666" y="211" text-anchor="middle">代理</text>
-  </g>
-  <text class="sub" x="32" y="263">代理开</text>
-  <g>
-    <rect x="84" y="244" width="60" height="28" rx="14" fill="none" stroke="#7f7f8a" stroke-opacity=".45"/>
-    <text class="cell" x="114" y="263" text-anchor="middle">…</text>
-    <rect x="148" y="244" width="60" height="28" rx="14" fill="#b06fd0"/>
-    <text class="cell on" x="178" y="263" text-anchor="middle">代理</text>
-    <rect x="212" y="244" width="60" height="28" rx="14" fill="#b06fd0"/>
-    <text class="cell on" x="242" y="263" text-anchor="middle">效率</text>
-    <rect x="276" y="244" width="60" height="28" rx="14" fill="none" stroke="#b06fd0" stroke-opacity=".45"/>
-    <text class="cell" x="306" y="263" text-anchor="middle">性能</text>
-  </g>
-
-  <text class="foot" x="32" y="312">常规 / 严格 / 极致 = 问多深   ·   轻量 / 交付 / 极致 = 磨几轮（3 / 5 / 8）   ·   增量 / 全量 = 找多宽   ·   效率 / 性能 = 派谁（子代理）</text>
-  <text class="foot" x="32" y="336">循环 + 对抗 同开 → 等级格转橙 #cf8a4a；检索恒天蓝 #3a9ad9；代理恒紫红 #b06fd0；效率/性能只在代理开时出现</text>
+  <text class="foot" x="32" y="330">常规 / 严格 / 极致 = 问多深   ·   轻量 / 交付 / 极致 = 磨几轮（3 / 5 / 8）   ·   本地 / 增量 / 全量 = 找多宽   ·   默认 / 效率 / 性能 = 派谁</text>
+  <text class="foot" x="32" y="354">检索格：本地 → 增量 → 全量 → 本地；代理格：默认 → 效率 → 性能 → 默认（v3.5.0 各一格，排在选项条末尾）</text>
+  <text class="foot" x="32" y="378">两格恒亮：本地也天蓝 #3a9ad9、默认也墨绿 #24543f；循环 + 对抗 同开时等级格转橙 #cf8a4a</text>
 </svg>

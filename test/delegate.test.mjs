@@ -87,11 +87,12 @@ test("不传模型：按注册表自动挑（含自配 API），并把 route 放
   assert.equal(req.label, "d1");
 });
 
-test("效率档挑低 tier；性能档挑 opus 级", async () => {
+test("效率档挑强于主模型的 mid 档；性能档挑 opus 级", async () => {
   const { tool } = boot();
   const eff = await tool.execute({ prompt: "p", description: "d", module: "executor" }, exec("s-eff"));
   assert.equal(eff.profile, "efficiency");
-  assert.equal(eff.provider, "deepseek-account", "效率档只挑 low/mid");
+  assert.equal(eff.source, "auto", "没有主模型信息时退回 auto");
+  assert.equal(eff.provider, "deepseek-account", "只有 flash 可选（high 档不进效率候选）");
 
   core.AGENT_PROFILES.includes("performance");
   const perf = await tool.execute(
@@ -100,6 +101,18 @@ test("效率档挑低 tier；性能档挑 opus 级", async () => {
   );
   assert.equal(perf.source, "explicit");
   assert.equal(perf.model, "claude-opus-5-5");
+});
+
+test("代理关 = 不强化：沿用主模型，不挑更强的 route（v3.4.0）", async () => {
+  const { tool } = boot();
+  const e = exec("s-base");
+  e.agent.model = { provider: "deepseek-official", id: "deepseek-flash" };
+  const out = await tool.execute({ prompt: "p", description: "d", module: "executor" }, e);
+  assert.equal(out.source, "baseline");
+  assert.equal(out.provider, "deepseek-official");
+  assert.equal(out.model, "deepseek-flash", "不开强化就用主模型");
+  assert.ok(out.text.includes("不强化"), out.text);
+  assert.equal(started[0].request.agentOptions.provider, "deepseek-official");
 });
 
 test("显式传 provider/model：原样透传，不查注册表", async () => {
