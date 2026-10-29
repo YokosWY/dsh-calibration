@@ -1,5 +1,16 @@
 # 变更记录
 
+## 3.6.0 — 2026-10-29
+- **检索档位从「一句口径」变成可执行清单**（用户口径 2026-10-29「增强检索质量，这个模式每次都没什么存在感」）：`ROUTE_PLAN` 每档新增 `steps`（编号步骤，4~5 步）、`ledger`（必交落盘文件）、`receipt`（收尾回执模板），旧字段 `scope/network/queries/reads/artifact/guard` 原样保留。
+  - 增量：`skillq` 本地盘点 → ≤3 组英文同义词联网查 → 候选表落 `tmp\skill-scan-<YYYYMMDD>.md`（名/来源/是否已装/星数/一句用途）→ 装 ≤1 或「不装」给理由。
+  - 全量：中英各 ≥2 组本地盘点 → ≥5 组查询、候选 ≥20 → 同组 ≥2 才比规格 → 判别卡（三段）+ 安装清单 + 冲突清单落 `tmp\skill-scan-full-<YYYYMMDD>.md`。
+- **回执硬性化**：`routeLine()` 输出多行清单，末段写死「收尾必须在回复末尾单起一行『检索回执：…』，数字跟落盘文件里的实际条目一致；没落盘就不许写这行」，并把「未落盘 = 未执行」写进每档 `guard`。
+- **悬停解释同步**：检索格 title 改成含产出与回执摘要（`TITLES.route`，client 兜底同步），点开就知道这档要交什么文件。
+- **代理计划接入「并行判据」**（用户口径 2026-10-29「能否和 CT 项目的代理模式融合」）：新增 `lib/fanout.js`——六步判据（依赖图 / 验收断言 / 净值公式 / 摘要回传 / 机械聚合 / 并发上限）+ 三条必亏情形（赛马、同文件并行写、伪并行）。代理开时 `agentSection()` 的计划文本末尾多一行「并行：<=N 块；…」，返回值多 `fanout` 字段（`maxBlocks` + `rules` + `never`）。判据来源 `token-governance/docs/fanout-criteria.md`；实测子代理 3.0s/步 vs 主会话 4.8s/步（近 10 天 80 会话，`step/start`→`step/end` 配对）。代理关时早退，零注入。
+- **修：工具输出含 `undefined` 被宿主判 `not lossless JSON`**。`agentSection()` 里 `mainRoute: main.provider ? main : undefined`：当 `exec.agent.model` 读不到（cordis 代理注入校验）时 `provider` 为空 → 键值 `undefined` → 序列化丢键、回读不等价 → `clarify_tier` 直接 `INVALID_TOOL_OUTPUT`。改成条件展开 `...(main.provider ? { mainRoute: main } : {})`。**代理开着时必现**，关着不触发，所以长期没暴露。
+- **降级链补到四级 + `fallbacks` 数组**（用户口径 2026-10-29「能用对应最强/性价比模型就用，不能就降级」）：新增 `buildFallbackChain()`，启动期与运行期共用同一份有序候选——官方同域同档 → 官方放宽（不限域/档位）→ 主模型，去重且排除当前 route。**修掉原来的断层**：旧代码「已在官方 deepseek + 启动失败」直接 `throw`，不会继续退；现在沿链逐条重试，全挂才抛最后一次错误（`tried` 列表进 note）。返回值新增 `fallbacks`（有序数组），`fallbackRoute` 保留为链首（向后兼容）；运行期收到 failed 时按顺序重派，文本写死「每条失败换下一条；全挂再报链路全挂」。
+- 测试：新增 `test/route.test.mjs` 4 项（步骤 / 日期落盘 / 回执 / 防回退）+ `test/fanout.test.mjs` 3 项（行文与上限兜底 / 快照副本语义 / 只给一行不灌全文）+ `delegate.test.mjs` 2 项（链有序且不含当前 route / 启动失败沿链重试），总数 136 → 145。
+
 ## 3.5.0 — 2026-10-29
 - **检索与代理各收成一个轮换格**（用户口径 2026-10-29「选项格少一点」）：主条从「本地/增量/全量 + 三档 + 循环 + 对抗 + 代理/效率/性能」改成固定 11 节点——`常规 严格 极致 ‖ 循环 对抗 ‖ [检索格] [代理格]`。
   - 检索格点一下 **本地 → 增量 → 全量 → 本地**；「本地」= `route.on=false`（原开关的关），只做显示名，不进 `ROUTE_LEVELS` / `ROUTE_PLAN`。
