@@ -26,6 +26,8 @@
 - 不改变 allowedModels 白名单语义：要真正可派，`sonnet` 仍需在该会话的 `allowedModels` 里（`agent_delegate` 走 provider 层不受此限）
 - 清单是写给模型的口径，不是硬门禁：没落盘时宿主不拦，只能靠回执里的文件名与条目数对照
 
+**回执可机械核对（同版本）**：`verify_claims` 新增 `kind=ledger`——读回执对应的落盘文件，数 Markdown 表格数据行，跟回执里的「N 候选」对账（`expect.candidates` 相等 / `expect.min` 下限 / 不给期望值只报数）。此前回执靠模型自觉，现在回执说 8 条、文件只有 3 行时，工具直接判未核。
+
 **客户端拆片（同版本）**：`lib/client.js` 1072 行按职责切成 `lib/client/` 六个分片，`scripts/build-client.mjs` 拼回单文件（浏览器模块只能一个 id 一个文件，发布面不变）。`npm run build:client` 生成、`verify` 前置 `--check`、`consistency.test.mjs` 守「分片拼接 == lib/client.js」，避免只改分片忘了 build。切片逐字节等价（42790 字节、0 行差异）。
 
 ## v3.6.0 — 检索档位变成可执行清单；代理侧补并行判据与降级链

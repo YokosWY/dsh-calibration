@@ -12,9 +12,11 @@
   - `lib/core.js` 的 `THINK_PLAN` / `LOOP_PLAN` / `AGENT_PLAN` 与 `counterPlan()` 补齐 `steps` / `ledger` / `receipt` / `guard`：思考常规档无步骤无回执，严格 5 步、极致 7 步（含设计树、逆向三条、对抗自检、止损线）且落 `tmp\tier-plan-<YYYYMMDD>.md`；循环三档 2/4/5 步，交付落 `tmp\forge-<YYYYMMDD>.md`、极致落 `tmp\forge-full-<YYYYMMDD>.md`；对抗只在开着时给步骤与「对抗回执」（三态收口）；代理效率 4 步、性能 5 步。
   - 新增 `test/contract.test.mjs` 7 项：渲染顺序、缺 `ledger` 时回执降级、思考/循环/对抗/代理各自的步骤与回执、五模式四字段结构守卫。
 - **检索增量档的查询口径补收窄**（验收演练实测：3 组泛查询 18 条结果里约 3 条可用，目录站与博客转述混排）：`ROUTE_PLAN.high.queries` 改为「≥3 组英文同义词（带 `site:github.com` 收窄）」。
+- **回执可机械核对**（v3.7.0）：`verify_claims` 新增 `source.kind = "ledger"`——读落盘文件，数 Markdown 表格数据行（跳过表头与分隔行），跟回执里写的「N 候选」对账；支持 `expect.candidates`（必须相等）/ `expect.min`（下限）/ 不给期望值只报数。导出 `ledgerRows()` 供测试。这样「未落盘 = 未执行」不再只靠模型自觉：回执说 8 条、文件 3 行，工具直接判未核。
+- **发布演练（同日）**：`npm pack --dry-run` 核对发布面——3.7.0 打 49 个文件、670.6kB（含 `lib/client/*` 六个源码分片与 `scripts/build-client.mjs`，发布面仍是单文件 `lib/client.js` 42.8kB）。
 - **客户端拆片 + 构建守卫**：`lib/client.js`（1072 行）按职责切成 `lib/client/` 六个分片（head / bridge / styles / net / ui / tail），`scripts/build-client.mjs` 拼回单文件——浏览器侧 `window.__ModuleLoader__.load` 只认一个 id 一个文件，不能真拆模块；发布面仍是单文件。新增 `npm run build:client`，`verify` 前置 `--check`，`consistency.test.mjs` 多加一条「分片拼接 == lib/client.js」，防「改了分片忘了 build」。切片用二进制拼接，逐字节等价（42790 字节，0 行差异）。
 - 测试：`delegate.test.mjs` 新增 3 项（性能档链首是同级次优 / 启动失败先重试同级 / 效率档不插同级）；`consistency.test.mjs` 补 1 项对抗契约断言。
-- 测试条数同步：README 148 → 160（`contract` 7 + `delegate` 3 + `consistency` 2）。
+- 测试条数同步：README 148 → 165（`contract` 7 + `delegate` 3 + `consistency` 2 + `ledger` 5）。
 
 ## 3.6.0 — 2026-10-29
 - **检索档位从「一句口径」变成可执行清单**（用户口径 2026-10-29「增强检索质量，这个模式每次都没什么存在感」）：`ROUTE_PLAN` 每档新增 `steps`（编号步骤，4~5 步）、`ledger`（必交落盘文件）、`receipt`（收尾回执模板），旧字段 `scope/network/queries/reads/artifact/guard` 原样保留。

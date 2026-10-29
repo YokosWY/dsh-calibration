@@ -151,7 +151,7 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 
 ```bash
 npm run build:client  # 分片 lib/client/*.js → 单文件 lib/client.js（改过分片必跑）
-npm test        # node --test，160 项，约 6 秒
+npm test        # node --test，165 项，约 6 秒
 npm run lint    # scripts/check.mjs：lib 下所有模块 + 所有测试逐个 node --check
 npm run verify  # build:client --check + lint + test，本地 CI 就用这条
 ```
@@ -165,7 +165,7 @@ npm run verify  # build:client --check + lint + test，本地 CI 就用这条
 - **状态与迁移**：默认值、模式/档位/对抗/检索/代理五轴合并写、非法值 400、标量与坏 JSON 400、schema 4/5 迁移 + `.bak`、**6 → 7 补 `counter`、7 → 8 补 `route`、8 → 9 补 `agent`（并把旧 `route.level=off` 归到 `high`）**、坏 JSON 与未知 schema 不覆写（含「未来 schema 带旧字段」也不降级）、字段坏只保留能认的一半
 - **工具投影**：`clarify_tier` / `forge_level` 的档位值、`pending`/`turnLocked`、`counter`（开关 / 条数随档位 3 与 5 / scope 随模式 / 隔离级别）、`agent`（关态只回 `on:false`；开态给模块路由与 `planId`）
 - **模型路由**：能力基线按族打分、用户覆盖优先、注册表指纹变化触发重算、未知族标 `unknown`、无 llm 服务时 `available:false`、对抗路由避开主模型 provider、注册表里没有的 route 被剔除
-- **`verify_claims`**：文件路径必须在工作区内、行号越界拒绝、锚点（数字/引号短语）不在该行 ±3 行即判未核、URL 只验语法与域名分级、命令片段含占位符判 weak、越界路径直接拒
+- **`verify_claims`**：文件路径必须在工作区内、行号越界拒绝、锚点（数字/引号短语）不在该行 ±3 行即判未核、URL 只验语法与域名分级、命令片段含占位符判 weak、越界路径直接拒；`kind=ledger` 数落盘文件的表格数据行，跟回执里写的「N 候选」机械对账（v3.7.0）
 - **桥与安全**：跨站 Origin 403（读/写/预检/null/子域伪装）、本机 Origin 回显 204、`text/plain` 415、写盘失败 500、SSE 首帧与广播、跨站 SSE 403、端口退让与 `plugin` 标记、退让日志只报一次且端口正确、`knownSession` 只认工具写过的会话
 - **界面与交互**：十一节点固定结构（3 档 + 隔离线 + 循环 + 隔离线 + 对抗 + 隔离线 + 检索格 + 隔离线 + 代理格），节点数不随开关增减（v3.5.0 前是 11/14 两态）、末尾两个轮换格（本地→增量→全量 / 默认→效率→性能，只有一个形态，宽窄屏相同，且**本地 / 默认 也保持天蓝 / 墨绿**）、两套标签、循环格亮起、对抗恒红、只提交变化的一维、focus 重新对齐、`/state` 文案优先、兜底文案与宿主表逐字一致、pending 小点、**循环 + 对抗同开时 `data-mix=1` 且橙只落在等级格（单开时都是 0）**、**检索格恒天蓝（`data-route`/`data-on` 只表状态，不控制配色）**、**代理格恒墨绿**
 - **容错与实例识别**：桥不可达只探一遍且 TTL 内不重扫、老宿主缺 `pending` 补一次 GET、SSE 断后重建不超上限、诊断默认关、离线与待生效同显、两套实例按会话归属切端口、单实例直接认领、两套都不认领时不读不写桥且认领后补写
