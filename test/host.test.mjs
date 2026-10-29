@@ -66,17 +66,14 @@ test("端口被占时自动退到下一个，并在 /state 带 plugin 标记", a
 
 test("对抗审是独立开关：关=0 条；开之后密度随档位 3/5，scope 随模式", async () => {
   await setSession("s-counter", "loop", "high");
+  const core = (c) => ({ enabled: c.enabled, maxAttacks: c.maxAttacks, scope: c.scope, isolation: c.isolation });
   let r = await callTool("forge_level", "s-counter", 1);
-  assert.deepEqual(
-    r.counter,
-    { enabled: false, maxAttacks: 0, scope: "round-changes", isolation: "none" },
-    "默认关",
-  );
+  assert.deepEqual(core(r.counter), { enabled: false, maxAttacks: 0, scope: "round-changes", isolation: "none" }, "默认关");
 
   // 打开对抗
   await post("s-counter", { counter: true });
   r = await callTool("forge_level", "s-counter", 2);
-  assert.deepEqual(r.counter, {
+  assert.deepEqual(core(r.counter), {
     enabled: true,
     maxAttacks: 3,
     scope: "round-changes",
@@ -86,7 +83,7 @@ test("对抗审是独立开关：关=0 条；开之后密度随档位 3/5，scop
   // 极致档：5 条
   await post("s-counter", { level: "max" });
   r = await callTool("forge_level", "s-counter", 3);
-  assert.deepEqual(r.counter, {
+  assert.deepEqual(core(r.counter), {
     enabled: true,
     maxAttacks: 5,
     scope: "round-changes",
@@ -96,12 +93,13 @@ test("对抗审是独立开关：关=0 条；开之后密度随档位 3/5，scop
   // 思考模式：scope 变成「动手前 + 交付前」
   await post("s-counter", { mode: "think" });
   const t = await callTool("clarify_tier", "s-counter", 4);
-  assert.deepEqual(t.counter, {
+  assert.deepEqual(core(t.counter), {
     enabled: true,
     maxAttacks: 5,
     scope: "plan+delivery",
     isolation: "subagent-preferred",
   });
+  assert.match(t.text, /对抗回执：/, "对抗开着的回执要写进输出");
 });
 
 test("knownSession 只认工具写过的会话（客户端写不算）", async () => {

@@ -17,7 +17,7 @@ const core = await import("../lib/core.js");
 const tools = new Map();
 const started = [];
 
-function fakeCtx({ withSubagents = true, withLlm = true, probeFails = false, startFails = 0 } = {}) {
+function fakeCtx({ withSubagents = true, withLlm = true, probeFails = false, startFails = 0, models = null } = {}) {
   let starts = 0;
   const services = {
     subagents: {
@@ -35,6 +35,7 @@ function fakeCtx({ withSubagents = true, withLlm = true, probeFails = false, sta
         { id: "deepseek-account" },
       ],
       listModels: async (id) => {
+        if (models && models[id]) return models[id];
         if (id === "yokos-beichenapi-anthropic") return [{ id: "claude-opus-5-5", contextWindow: 1000000 }];
         if (id === "yokos-grok-image") return [{ id: "grok-4.7", contextWindow: 500000 }];
         return [{ id: "deepseek-flash", contextWindow: 128000 }];
@@ -319,5 +320,68 @@ test("回退到没声明 efforts 的模型时不传 reasoning_effort", async () 
     started[0].request.agentOptions.reasoningEffort,
     undefined,
     "目标模型没声明 efforts 就不能把原模型的等级套上去",
+  );
+});
+
+// ---- v3.7.0：性能档「先同质、再降级」 ----
+const SONNET_FIXTURE = {
+  "yokos-beichenapi-anthropic": [
+    { id: "claude-opus-5-5", contextWindow: 1000000 },
+    { id: "claude-sonnet-5-5", contextWindow: 1000000 },
+  ],
+};
+
+async function usePerformance(session) {
+  const { writeFileSync } = await import("node:fs");
+  writeFileSync(
+    join(home, "storages", "calibration.json"),
+    JSON.stringify({
+      schema: 9,
+      sessions: {
+        [session]: {
+          mode: "think",
+          level: "high",
+          counter: false,
+          route: { on: false, level: "high" },
+          agent: { on: true, profile: "performance" },
+          updatedAt: null,
+          turn: null,
+          owner: null,
+        },
+      },
+    }),
+    "utf8",
+  );
+}
+
+test("性能档：运行期降级链首是同级次优（opus → sonnet），官方留在链尾兜底", async () => {
+  await usePerformance("s-peer");
+  const { tool } = boot({ models: SONNET_FIXTURE });
+  const out = await tool.execute({ prompt: "p", description: "d", module: "executor" }, exec("s-peer"));
+  assert.equal(out.source, "auto");
+  assert.equal(out.provider, "yokos-beichenapi-anthropic");
+  assert.equal(out.model, "claude-opus-5-5", "性能档主 route 仍是 opus");
+  assert.deepEqual(out.fallbacks[0], { provider: "yokos-beichenapi-anthropic", model: "claude-sonnet-5-5" });
+  assert.match(out.fallbacks[out.fallbacks.length - 1].provider, /^deepseek-/, "官方仍在链尾兜底");
+});
+
+test("性能档：opus 启动失败时先重试同级 sonnet，而不是直接掉到官方", async () => {
+  await usePerformance("s-peer2");
+  const { tool } = boot({ models: SONNET_FIXTURE, startFails: 1 });
+  const out = await tool.execute({ prompt: "p", description: "d", module: "executor" }, exec("s-peer2"));
+  assert.equal(out.fellBack, true);
+  assert.equal(out.provider, "yokos-beichenapi-anthropic");
+  assert.equal(out.model, "claude-sonnet-5-5");
+  assert.ok(out.text.includes("已回退"), out.text);
+});
+
+test("效率档不插同级备选：链里不出现自配同级模型（避免偷偷升级）", async () => {
+  const { tool } = boot({ models: SONNET_FIXTURE });
+  const out = await tool.execute({ prompt: "p", description: "d", module: "executor" }, exec("s-eff2"));
+  assert.equal(out.profile, "efficiency");
+  const chain = out.fallbacks || [];
+  assert.ok(
+    chain.every((f) => /^deepseek-/.test(f.provider)),
+    `效率档链里不该出现同级自配模型：${JSON.stringify(chain)}`,
   );
 });

@@ -69,26 +69,41 @@ test("技能里的档位表与宿主 LEVELS 是同一套", () => {
   }
 });
 
+const counterCore = (c) => ({ enabled: c.enabled, maxAttacks: c.maxAttacks, scope: c.scope, isolation: c.isolation });
+
 test("对抗审：默认关、开之后密度随档位、scope 随模式、隔离随开关", () => {
   assert.deepEqual(Object.keys(COUNTER_ATTACKS).sort(), [...LEVELS].sort(), "COUNTER_ATTACKS 的键必须与 LEVELS 一致");
-  assert.deepEqual(counterPlan("think", "high", false), {
+  assert.deepEqual(counterCore(counterPlan("think", "high", false)), {
     enabled: false,
     maxAttacks: 0,
     scope: "plan+delivery",
     isolation: "none",
   });
-  assert.deepEqual(counterPlan("think", "high", true), {
+  assert.deepEqual(counterCore(counterPlan("think", "high", true)), {
     enabled: true,
     maxAttacks: 3,
     scope: "plan+delivery",
     isolation: "subagent-preferred",
   });
-  assert.deepEqual(counterPlan("loop", "max", true), {
+  assert.deepEqual(counterCore(counterPlan("loop", "max", true)), {
     enabled: true,
     maxAttacks: 5,
     scope: "round-changes",
     isolation: "subagent-preferred",
   });
+});
+
+test("对抗审也有可执行契约（v3.7.0）：开=步骤+回执+守卫，关=空", () => {
+  const off = counterPlan("think", "high", false);
+  assert.deepEqual(off.steps, []);
+  assert.equal(off.receipt, "");
+  const onThink = counterPlan("think", "high", true);
+  assert.ok(onThink.steps.length >= 3, "思考模式至少 3 步");
+  assert.match(onThink.steps.join(""), /三态收口/);
+  assert.match(onThink.receipt, /^对抗回执：/);
+  assert.match(onThink.guard, /同族不算真隔离/);
+  const onLoop = counterPlan("loop", "max", true);
+  assert.match(onLoop.steps.join(""), /每轮只审本轮改动/);
 });
 
 test("文案统一叫「五模式」：现行文档不再出现「双模式 / 两个模式 / 三模式 / 四模式」", () => {
