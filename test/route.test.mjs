@@ -28,6 +28,28 @@ test("关着：只回一行「本地」，不带步骤与回执", () => {
   assert.equal(routeLine(routePlan(false, "high")), "检索：关（本地行为，按需 ls/read）");
 });
 
+test("plan 缺 ledger 时不留空落盘路径", () => {
+  const line = routeLine(
+    {
+      on: true,
+      label: "增量",
+      plan: {
+        scope: "local",
+        network: true,
+        queries: "≥3 组",
+        reads: "≤3 篇",
+        artifact: "候选表",
+        receipt: "检索回执：增量 · {queries} 查询",
+        guard: "只跑首轮",
+      },
+    },
+    DAY,
+  );
+  assert.ok(!line.includes("落盘 "), "没有 ledger 就不该留「落盘 」尾巴");
+  assert.ok(!/数字跟\s+里的/.test(line), "回执不该出现空路径");
+  assert.match(line, /产出：候选表/);
+});
+
 test("两档都有 steps/ledger/receipt，防止回退成一句话", () => {
   for (const lv of ["high", "max"]) {
     const p = ROUTE_PLAN[lv];

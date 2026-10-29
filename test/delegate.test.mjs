@@ -70,7 +70,10 @@ function boot(opts) {
   return { tool, env };
 }
 
-const exec = (session = "s-del") => ({ agent: { id: session, session: { id: session }, phase: { turn: 1 } }, signal: null });
+const exec = (session = "s-del", model = null) => ({
+  agent: { id: session, session: { id: session }, phase: { turn: 1 }, ...(model ? { model } : {}) },
+  signal: null,
+});
 
 test("不传模型：按注册表自动挑（含自配 API），并把 route 放进 agentOptions", async () => {
   const { tool } = boot();
@@ -281,4 +284,40 @@ test("启动失败沿降级链重试，不只试一条", async () => {
   assert.ok(out.text.includes("已回退"), out.text);
   // 已落到官方且官方池只有一条时，链为空是正确的：没有更低一级可退
   assert.equal(out.provider, "deepseek-account");
+});
+
+test("回退后运行期链跳过启动期已失败的候选", async () => {
+  // 显式自配 grok 失败 → 官方 deepseek 也失败 → 主模型 claude 成功。
+  // 此时运行期链不该再把 grok / deepseek 排进去（重派过去仍是死路）。
+  const { tool } = boot({ startFails: 2 });
+  const out = await tool.execute(
+    { prompt: "p", description: "d", provider: "yokos-grok-image", model: "grok-4.7" },
+    exec("s-retry", { provider: "yokos-beichenapi-anthropic", id: "claude-opus-5-5" }),
+  );
+  assert.equal(out.fellBack, true);
+  assert.equal(out.provider, "yokos-beichenapi-anthropic", "最后落在主模型");
+  assert.equal(out.fallbacks, undefined, "没有可重派的候选时不该给空链");
+  assert.ok(!out.text.includes("按此顺序重派"), "没链就不能写重派说明");
+  assert.match(out.text, /之前 .*也失败/, "note 要列出启动期试过的候选");
+});
+
+test("回退到没声明 efforts 的模型时不传 reasoning_effort", async () => {
+  const { tool } = boot({ startFails: 1 });
+  const out = await tool.execute(
+    {
+      prompt: "p",
+      description: "d",
+      provider: "yokos-beichenapi-anthropic",
+      model: "claude-opus-5-5",
+      reasoning_effort: "high",
+    },
+    exec(),
+  );
+  assert.equal(out.fellBack, true);
+  assert.match(out.provider, /^deepseek-/);
+  assert.equal(
+    started[0].request.agentOptions.reasoningEffort,
+    undefined,
+    "目标模型没声明 efforts 就不能把原模型的等级套上去",
+  );
 });
