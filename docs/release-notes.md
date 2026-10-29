@@ -18,6 +18,11 @@
 
 **降级链（`lib/delegate.js`）**：`buildFallbackChain()` 让启动期与运行期共用一份有序候选——官方同域同档 → 官方放宽（不限域/档位）→ 主模型，去重且排除当前 route；重试统一落回 `spawn`。返回值新增 `fallbacks`（有序数组），`fallbackRoute` 保留为链首。**修掉旧断层**：原来「已在官方 deepseek 且启动失败」直接 `throw`，不再往下退；现在沿链逐条试，全挂才抛最后一次错误（`tried` 列表进 note）。
 
+**自查补的三处**
+- **官方兜底可能返回主模型**：`pickRoute` 走效率档时，池里挑不到「比基线更强」的会退回基线 route，于是「官方池」里可能拿回自配/主模型，被降级链当第一跳。新增 `inPool()` 只承认传进去的那份候选，越界一律落 `pool[0]`。
+- **回退时的推理等级**：改成 `effortFor(cand, preferred)`——目标没声明 `efforts` 就不传（v3.2.1 口径），声明了但当前值不在列表里就改用它的默认档。
+- **运行期链跳过启动期已失败的候选**：`buildFallbackChain(..., skip)` 收一份 `failedAtStart`，避免重派回刚失败过的死路；note 补「隔离度降为 none」。检索侧则在 `plan` 缺 `ledger` 时不再输出空落盘路径。
+
 **修：工具输出含 `undefined` 被宿主判 `not lossless JSON`**。`agentSection()` 里 `mainRoute: main.provider ? main : undefined`，当 `exec.agent.model` 读不到时该键值即 `undefined` → 序列化丢键、回读不等价 → `clarify_tier` 直接 `INVALID_TOOL_OUTPUT`。改成条件展开 `...(main.provider && main.model ? { mainRoute: main } : {})`。代理开着时必现，关着不触发。
 
 **限制**：回执靠模型自觉执行，工具侧只给清单与判据，不做自动拦截；增量档每轮多 3 次搜索与 1 次写盘，全量更贵，默认仍是「本地」。并行判据同样只是说明与字段，派不派活仍由模型自己判断。

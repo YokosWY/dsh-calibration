@@ -9,7 +9,12 @@
 - **代理计划接入「并行判据」**（用户口径 2026-10-29「能否和 CT 项目的代理模式融合」）：新增 `lib/fanout.js`——六步判据（依赖图 / 验收断言 / 净值公式 / 摘要回传 / 机械聚合 / 并发上限）+ 三条必亏情形（赛马、同文件并行写、伪并行）。代理开时 `agentSection()` 的计划文本末尾多一行「并行：<=N 块；…」，返回值多 `fanout` 字段（`maxBlocks` + `rules` + `never`）。判据来源 `token-governance/docs/fanout-criteria.md`；实测子代理 3.0s/步 vs 主会话 4.8s/步（近 10 天 80 会话，`step/start`→`step/end` 配对）。代理关时早退，零注入。
 - **修：工具输出含 `undefined` 被宿主判 `not lossless JSON`**。`agentSection()` 里 `mainRoute: main.provider ? main : undefined`：当 `exec.agent.model` 读不到（cordis 代理注入校验）时 `provider` 为空 → 键值 `undefined` → 序列化丢键、回读不等价 → `clarify_tier` 直接 `INVALID_TOOL_OUTPUT`。改成条件展开 `...(main.provider ? { mainRoute: main } : {})`。**代理开着时必现**，关着不触发，所以长期没暴露。
 - **降级链补到四级 + `fallbacks` 数组**（用户口径 2026-10-29「能用对应最强/性价比模型就用，不能就降级」）：新增 `buildFallbackChain()`，启动期与运行期共用同一份有序候选——官方同域同档 → 官方放宽（不限域/档位）→ 主模型，去重且排除当前 route。**修掉原来的断层**：旧代码「已在官方 deepseek + 启动失败」直接 `throw`，不会继续退；现在沿链逐条重试，全挂才抛最后一次错误（`tried` 列表进 note）。返回值新增 `fallbacks`（有序数组），`fallbackRoute` 保留为链首（向后兼容）；运行期收到 failed 时按顺序重派，文本写死「每条失败换下一条；全挂再报链路全挂」。
-- 测试：新增 `test/route.test.mjs` 4 项（步骤 / 日期落盘 / 回执 / 防回退）+ `test/fanout.test.mjs` 3 项（行文与上限兜底 / 快照副本语义 / 只给一行不灌全文）+ `delegate.test.mjs` 2 项（链有序且不含当前 route / 启动失败沿链重试），总数 136 → 145。
+- **自查补的三处（同日）**：
+  - **修：官方兜底可能返回主模型**。`pickRoute` 走效率档时，池里挑不到「比基线更强」的会退回基线 route，于是「官方池」里可能拿回自配/主模型，降级链把它当第一跳。新增 `inPool()` 只承认传进去的那份候选，越界一律落 `pool[0]`；`officialFallback()` 与链路第二跳都改走它。
+  - **修：回退时把原模型的推理等级套给新模型**。改成 `effortFor(cand, preferred)`——目标没声明 `efforts` 就不传，声明了但当前值不在列表里就改用它的默认档。
+  - **运行期链跳过启动期已失败的候选**：`buildFallbackChain(..., skip)` 收一份 `failedAtStart`，避免重派回刚失败过的死路；同时 note 补「隔离度降为 none」。
+  - **检索回执**：`plan` 缺 `ledger` 时不再输出「落盘 」空尾巴与空路径回执。
+- 测试：新增 `test/route.test.mjs` 5 项（步骤 / 日期落盘 / 回执 / 防回退 / 缺 ledger 守卫）+ `test/fanout.test.mjs` 3 项（行文与上限兜底 / 快照副本语义 / 只给一行不灌全文）+ `delegate.test.mjs` 4 项（链有序且不含当前 route / 启动失败沿链重试 / 跳过已失败候选 / 回退不套推理等级），总数 136 → 148。
 
 ## 3.5.0 — 2026-10-29
 - **检索与代理各收成一个轮换格**（用户口径 2026-10-29「选项格少一点」）：主条从「本地/增量/全量 + 三档 + 循环 + 对抗 + 代理/效率/性能」改成固定 11 节点——`常规 严格 极致 ‖ 循环 对抗 ‖ [检索格] [代理格]`。
