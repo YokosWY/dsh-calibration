@@ -151,7 +151,7 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 
 ```bash
 npm run build:client  # 分片 lib/client/*.js → 单文件 lib/client.js（改过分片必跑）
-npm test        # node --test，165 项，约 6 秒
+npm test        # node --test，167 项，约 6 秒
 npm run lint    # scripts/check.mjs：lib 下所有模块 + 所有测试逐个 node --check
 npm run verify  # build:client --check + lint + test，本地 CI 就用这条
 ```

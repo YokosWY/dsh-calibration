@@ -97,3 +97,27 @@ test("结构守卫：五个模式都带 steps/ledger/receipt/guard 四个字段"
   }
   assert.match(routeLine(routePlan(true, "high"), DAY), /检索回执：增量/);
 });
+
+test("回执只在真发生时要求：循环/代理/对抗带条件，检索档不设条件", () => {
+  const loop = loopLine("high", DAY);
+  assert.match(loop, /收尾仅当本轮真跑到 ≥2 轮时/);
+  assert.match(loop, /没发生就不写这行/);
+
+  const agent = renderContract("代理：开", AGENT_PLAN.performance, DAY);
+  assert.match(agent, /收尾仅当本轮真派了子代理/);
+
+  const counter = counterLineOf(counterPlan("think", "high", true), "think", DAY);
+  assert.match(counter, /收尾仅当本轮真提出 ≥1 条对抗条目时/);
+
+  // 检索是「切到档就是执行」，不设条件，仍用「收尾必须」
+  assert.match(routeLine(routePlan(true, "max"), DAY), /收尾必须在回复末尾单起一行「检索回执：全量/);
+});
+
+test("条件的档位不再保留重复的「收尾单起一行」步骤", () => {
+  for (const [name, p] of [
+    ["loop:high", LOOP_PLAN.high],
+    ["agent:performance", AGENT_PLAN.performance],
+  ]) {
+    assert.ok(!(p.steps || []).some((s) => /收尾单起一行/.test(s)), `${name} 步骤里还留着重复回执步骤`);
+  }
+});
