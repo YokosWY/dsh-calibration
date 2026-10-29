@@ -197,6 +197,21 @@ test("README 已知边界不再回头说全局与写死端口", () => {
   assert.ok(section.includes("43871"), "已知边界应写明端口区间");
 });
 
+test("lib/client.js 与 lib/client/*.js 拼接一致（分片是源码，client.js 是产物）", () => {
+  const partsDir = join(root, "lib", "client");
+  assert.ok(existsSync(partsDir), "缺 lib/client/ 分片目录");
+  const parts = readdirSync(partsDir)
+    .filter((f) => f.endsWith(".js"))
+    .sort();
+  assert.ok(parts.length >= 4, `分片只有 ${parts.length} 个，职责切分丢了？`);
+  const built = Buffer.concat(parts.map((f) => readFileSync(join(partsDir, f))));
+  const shipped = readFileSync(join(root, "lib", "client.js"));
+  assert.ok(
+    built.equals(shipped),
+    `lib/client.js 与 ${parts.length} 个分片的拼接结果不一致——改完分片跑 npm run build:client`,
+  );
+});
+
 test("README 写的测试条数跟实际一致", () => {
   const claimed = Number((read("README.md").match(/npm test\s+#.*?(\d+) 项/) || [])[1]);
   assert.ok(Number.isFinite(claimed), "README 测试段没写「N 项」");

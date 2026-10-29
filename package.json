@@ -29,7 +29,8 @@
   "scripts": {
     "test": "node --test \"test/*.test.mjs\"",
     "lint": "node scripts/check.mjs",
-    "verify": "npm run lint && npm test"
+    "verify": "node scripts/build-client.mjs --check && npm run lint && npm test",
+    "build:client": "node scripts/build-client.mjs"
   },
   "engines": {
     "node": ">=22"

@@ -150,10 +150,13 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 ## 测试
 
 ```bash
-npm test        # node --test，159 项，约 6 秒
+npm run build:client  # 分片 lib/client/*.js → 单文件 lib/client.js（改过分片必跑）
+npm test        # node --test，160 项，约 6 秒
 npm run lint    # scripts/check.mjs：lib 下所有模块 + 所有测试逐个 node --check
-npm run verify  # lint + test，本地 CI 就用这条
+npm run verify  # build:client --check + lint + test，本地 CI 就用这条
 ```
+
+客户端是单文件浏览器模块（`window.__ModuleLoader__.load` 只认一个 id 一个文件），所以**源码按职责切成 `lib/client/*.js` 六个分片，构建时拼回 `lib/client.js`**；发布面仍是单文件，`verify` 会拦「改了分片忘了 build」的漂移。
 
 发版走 `docs/release-checklist.md` 那张表：GitHub About 与 Topics 也算发布面，About 逐字取 `package.json` 的 `description`（离线测试只能守 description 的措辞，About 本身要人工/API 同步）。
 

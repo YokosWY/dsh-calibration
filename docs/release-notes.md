@@ -26,6 +26,8 @@
 - 不改变 allowedModels 白名单语义：要真正可派，`sonnet` 仍需在该会话的 `allowedModels` 里（`agent_delegate` 走 provider 层不受此限）
 - 清单是写给模型的口径，不是硬门禁：没落盘时宿主不拦，只能靠回执里的文件名与条目数对照
 
+**客户端拆片（同版本）**：`lib/client.js` 1072 行按职责切成 `lib/client/` 六个分片，`scripts/build-client.mjs` 拼回单文件（浏览器模块只能一个 id 一个文件，发布面不变）。`npm run build:client` 生成、`verify` 前置 `--check`、`consistency.test.mjs` 守「分片拼接 == lib/client.js」，避免只改分片忘了 build。切片逐字节等价（42790 字节、0 行差异）。
+
 ## v3.6.0 — 检索档位变成可执行清单；代理侧补并行判据与降级链
 
 **背景**：检索档位此前只有一句口径（「联网找已装之外能用的技能，只读文本不安装」），切到增量/全量后模型看不出要做什么、事后也验不出做没做——用户口径：「增强检索质量，这个模式每次都没什么存在感」。
