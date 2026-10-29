@@ -250,3 +250,35 @@ test("backend=claude-code 启动失败：回退到 spawn + 官方模型并提醒
   assert.match(out.provider, /^deepseek-/);
   assert.ok(out.text.includes("已回退"), out.text);
 });
+
+test("fallbacks：返回有序降级链，且不含当前 route", async () => {
+  const { tool } = boot();
+  const out = await tool.execute(
+    { prompt: "p", description: "d", provider: "yokos-beichenapi-anthropic", model: "claude-opus-5-5" },
+    exec(),
+  );
+  assert.ok(Array.isArray(out.fallbacks), "应返回 fallbacks 数组");
+  assert.ok(out.fallbacks.length >= 1, "至少有一条降级候选");
+  const self = `${out.provider}/${out.model}`;
+  assert.ok(!out.fallbacks.some((f) => `${f.provider}/${f.model}` === self), "链里不应含当前 route");
+  assert.match(out.fallbacks[0].provider, /^deepseek-/, "第一条应是官方渠道");
+  assert.match(out.text, /按此顺序重派/, "文本要给出运行期重派顺序");
+  if (out.fallbackRoute) {
+    assert.equal(out.fallbackRoute.provider, out.fallbacks[0].provider, "fallbackRoute 与链首一致（向后兼容）");
+  }
+});
+
+test("启动失败沿降级链重试，不只试一条", async () => {
+  // 第 1 次（显式自配）失败 → 第 2 次（链首官方）成功
+  const { tool } = boot({ startFails: 1 });
+  const out = await tool.execute(
+    { prompt: "p", description: "d", provider: "yokos-beichenapi-anthropic", model: "claude-opus-5-5" },
+    exec(),
+  );
+  assert.equal(out.fellBack, true);
+  assert.equal(started.length, 1, "只记录成功那一次");
+  assert.equal(started[0].provider, "spawn", "降级重试统一走 spawn");
+  assert.ok(out.text.includes("已回退"), out.text);
+  // 已落到官方且官方池只有一条时，链为空是正确的：没有更低一级可退
+  assert.equal(out.provider, "deepseek-account");
+});
