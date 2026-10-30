@@ -139,11 +139,11 @@ test("没有 llm 又没有显式 route：报错，不编造模型", async () => 
   await assert.rejects(() => tool.execute({ prompt: "p", description: "d" }, exec()), /llm 注册表为空/);
 });
 
-test("counter 模块：自动挑时避开主模型 provider（拿不到主模型则标 unknown）", async () => {
+test("counter 模块：自动挑时避开主模型 provider（拿不到基线则 fail-closed 标 low）", async () => {
   const { tool } = boot();
   const out = await tool.execute({ prompt: "p", description: "d", module: "counter" }, exec());
   assert.equal(out.module, "counter");
-  assert.equal(out.isolation, "unknown", "exec 里没有主模型信息，不能谎报 high");
+  assert.equal(out.isolation, "low", "exec 里没有主模型信息，不能谎报 high，也不再输出 unknown");
 });
 
 test("自配 API 预检失败：自动回退官方，并在返回里提醒", async () => {

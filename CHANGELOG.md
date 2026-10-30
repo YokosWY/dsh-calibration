@@ -1,5 +1,23 @@
 # 变更记录
 
+## 3.8.0 — 2026-10-30
+- **让别人也能达到同样效果**（用户口径 2026-10-30「方便其他人使用我的项目时能达到和我一样的效果」）：
+  - 能力族从 6 条扩到 26 条（claude haiku/通用、gpt-5.6/5/4、codex、gemini-3/通用、glm-5/4、kimi-k3/通用、minimax、qwen3/通用、step、hy4/hy3、deepseek-v4-pro/兜底、grok）；未识别模型仍 5 分兜底但带 `derived` 标记，便于 doctor 提示覆盖。
+  - 非聊天模型自动剔除：`grok-imagine-image/video` 这类挂在 `openai-completions` 下的 id 不再进候选；规则在 `lib/core.js` 的 `NON_CHAT_PATTERN`，`models["p/m"].chat` 可单条改判。
+  - 覆盖配置升级成四类键：`models` / `families` / `exclude` / `providers`，按文件 mtime 缓存，改完不用重启；`families` 排在内置表前面。
+  - 新增 `npm run doctor`（`scripts/doctor.mjs`）：读注册表快照 + 当前能力表，打印每条 route 的族/档/分值/标记、两档各模块实挑结果与隔离原因、剔除项、未识别项；支持 `--home=` 与 `--main=provider/model`。
+  - `mainRouteFromExec` 兼容宿主多种暴露形状（`agent.model.{provider,id}`、`model.{provider,id}`、`exec.{provider,model}`、`request.model.*`），别人机器上隔离判定不再全落 `low`。
+  - README 新增「换台机器 / 别人用（同效复现）」：三步接入、覆盖文件示例、同效四条前提、doctor 输出解读。
+  - 测试：新增 `test/portability.test.mjs` 5 项，总数 169 → 174。
+
+## 3.7.3 — 2026-10-30
+- **对抗隔离改判据**（用户口径 2026-10-30「对抗和性能是不是隔离的」）：
+  - 隔离基线从「会话主模型」改成「真正干活的 executor」：`planRoutes()` 先定 executor，再把它的 provider/model 当 counter 基线（`lib/agents.js` 新增 `planModules()`，回退档同口径）。原逻辑在代理开、executor 已强化成 opus 时仍只比主模型，会把「opus 审 opus」判成 `high`。
+  - fail-closed：拿不到基线不再输出第四态 `unknown`，按 `low` 算并带 `isolationReason`（`baseline-unknown` / `same-family` / `diff-provider` / `diff-model-same-provider` / `same-model`）。
+  - 口径统一：删掉 `AGENT_PLAN.counterAttacks`（与 `COUNTER_ATTACKS` 重复且不一致，条数实际只由思考/循环档决定）；guard 文案改为「审者与执行模型同族不算真隔离；证明不了异族就标『隔离度：低』」。
+  - 测试：新增 2 项（基线改用 executor、两个基线取最差），改 2 项旧断言，总数 167 → 169。
+  - 范围：只改判定与文案，未动 `agent_delegate` / `clarify_tier` 的派活行为。
+
 ## 3.7.2 — 2026-10-30
 - **修：`test/host.test.mjs` 全量并发跑整块变红**（旧写法把端口写死成 `43991`/`43992`：两个进程同时跑测试就抢同一对端口，抢输的一方永远等不到「桥接就绪」，整个文件 39 项全挂；单跑却全过）。
   - 端口改由 OS 分配并先占住（`listen(0)`），再通过 `DSH_CLARIFY_TIER_PORT` 告诉插件；真绑上的端口从「桥接就绪 http://127.0.0.1:PORT/state」日志解析，`BASE` / `openStream` / 就绪断言全改用实测端口；启动前确认 `port+1` 空闲，贴 65535 上限时换端口重试。

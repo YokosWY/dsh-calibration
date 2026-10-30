@@ -1,6 +1,6 @@
 {
   "name": "dsh-calibration-tier",
-  "version": "3.7.2",
+  "version": "3.8.0",
   "author": "YokosWY",
   "repository": {
     "type": "git",
@@ -30,7 +30,8 @@
     "test": "node --test \"test/*.test.mjs\"",
     "lint": "node scripts/check.mjs",
     "verify": "node scripts/build-client.mjs --check && npm run lint && npm test",
-    "build:client": "node scripts/build-client.mjs"
+    "build:client": "node scripts/build-client.mjs",
+    "doctor": "node scripts/doctor.mjs"
   },
   "engines": {
     "node": ">=22"

@@ -174,10 +174,34 @@ test("对抗：必须避开主模型 provider；只能同 provider 时降级为�
   assert.equal(sameProvider.isolation, "mid", "同 provider 但换 model → 中");
 });
 
-test("对抗：拿不到主模型 provider 时不假装隔离，标 unknown", () => {
+test("对抗：拿不到基线时 fail-closed 标 low（v3.8.0 起不再输出 unknown）", () => {
   const r = agents.pickRoute(ROUTES, "counter", "performance");
-  assert.equal(r.isolation, "unknown", "未知主模型不能报 high");
+  assert.equal(r.isolation, "low", "未知基线不能报 high，也不能留第四态");
+  assert.equal(r.isolationReason, "baseline-unknown");
   assert.ok(r.provider && r.model);
+});
+
+test("planRoutes：counter 的隔离基线是 executor（不是会话主模型）", () => {
+  // 主模型是 deepseek-flash，但 executor 被强化成 opus；只比主模型会把 opus 审 opus 判成 high
+  const plan = agents.planRoutes(ROUTES, "performance", { mainProvider: "deepseek-account", mainModel: "deepseek-flash" });
+  assert.equal(plan.modules.executor.provider, "yokos-cc");
+  assert.notEqual(plan.modules.counter.provider, plan.modules.executor.provider, "审者不得与执行者同 provider");
+  assert.equal(plan.modules.counter.isolation, "high");
+  assert.equal(plan.modules.counter.isolationReason, "diff-provider");
+});
+
+test("对抗：主模型与 executor 两个基线取最差（v3.8.0 防「审者 = 主模型」被判 high）", () => {
+  // 只有两个 provider：躲得开主模型就躲不开 executor，最后只能回到 executor 本人
+  const routes = [agents.scoreRoute("deepseek-account", "deepseek-flash"), agents.scoreRoute("yokos-cc", "claude-opus-5-5")];
+  const r = agents.pickRoute(routes, "counter", "performance", {
+    mainProvider: "deepseek-account",
+    mainModel: "deepseek-flash",
+    workerProvider: "yokos-cc",
+    workerModel: "claude-opus-5-5",
+  });
+  assert.equal(r.isolation, "low", "与 worker 同模型时不能报 high");
+  assert.equal(r.isolationReason, "same-model");
+  assert.equal(r.isolationRole, "worker");
 });
 
 test("planRoutes：性能档带效率档回退（三级回退前两级），效率档自身不带", () => {

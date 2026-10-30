@@ -147,11 +147,49 @@ pwsh -File install-profile.ps1 -Uninstall  # 卸载
 - **POST 必须是 `application/json`**，挡掉 `text/plain` 这类绕过预检的简单请求
 - 没有 token 鉴权：**同机其它进程仍可写**。这台机器上的信任边界就是本机，够用但不防本机恶意程序
 
+## 换台机器 / 别人用（同效复现）
+
+代理档排得好不好，只取决于三件事：**注册表里有什么**、**能力表怎么打分**、**你覆盖了什么**。这三件都可查、可调，不依赖作者本机。
+
+三步：
+
+```bash
+# 1) 装好插件、重启 DSH，发一轮消息（插件会枚举一次注册表并落快照）
+# 2) 体检：看两档实际挑谁、隔离度、哪些模型没被识别
+npm run doctor -- --main=<你的 provider>/<你的 model>
+# 3) 缺什么补什么（改的是 $DSH_HOME/storages/calibration-models.json，改完不用重启）
+npm run doctor -- --main=...   # 再跑一遍确认
+```
+
+覆盖文件四类键，都可选：
+
+```json
+{
+  "models":   { "p/m": { "code": 9, "reasoning": 9, "tier": "high", "cost": 5, "contextWindow": 1000000, "chat": true } },
+  "families": [{ "match": "acme-super", "code": 9, "reasoning": 9, "writing": 9, "longContext": 9, "toolUse": 9, "tier": "high", "cost": 2 }],
+  "exclude":  ["p/old-model"],
+  "providers": { "my-free-channel": true }
+}
+```
+
+`families` 排在内置表前面（先命中先赢），`models` 按 `provider/model` 单条覆盖，`providers` 改免费线名单，`exclude` 直接踢出候选。`chat: true|false` 用来抢救/剔除被 id 关键字误判的模型（图像、视频、嵌入默认剔除）。
+
+**同效的前提**（不满足就会退化，doctor 会提示）：
+
+| 条件 | 不满足时 |
+|---|---|
+| 注册表里至少两个**异族** provider | 对抗隔离只能 `mid/low`，「换人审」变「自己审」 |
+| 主模型能被插件读到（`clarify_tier` 里 `mainRoute` 有值） | 隔离按 `low` 算，不谎报 high |
+| 你的常用模型在能力表里，或有 `families`/`models` 覆盖 | 未识别模型只给 5 分，两档都会绕开它 |
+| 想派子代理的话，模型走的是自配 API | 官方 `subagent` 受会话白名单限制；`agent_delegate` 不受限 |
+
+`npm run doctor` 输出怎么看：`族` 列是命中的能力族（`未识别` = 5 分兜底）；`分值` 顺位是代码/推理/写作/长文/工具；`剔除` 段是非聊天或 `exclude` 掉的；两档下方是每个模块实际会派的 provider/model，括号里是隔离度与判定原因。
+
 ## 测试
 
 ```bash
 npm run build:client  # 分片 lib/client/*.js → 单文件 lib/client.js（改过分片必跑）
-npm test        # node --test，167 项，约 6 秒
+npm test        # node --test，174 项，约 6 秒
 npm run lint    # scripts/check.mjs：lib 下所有模块 + 所有测试逐个 node --check
 npm run verify  # build:client --check + lint + test，本地 CI 就用这条
 ```

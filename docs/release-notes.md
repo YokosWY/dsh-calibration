@@ -3,6 +3,36 @@
 > GitHub Release 直接取用。更早版本（0.1.0–1.1.1）的逐条记录见 `CHANGELOG.md`。
 > 写法约定：只写机制、范围、限制、数字；不写形容词与口号。
 
+## v3.8.0 — 可移植：能力族扩到 26 条、非聊天模型剔除、四类覆盖键、doctor 自检
+
+**问题**：代理档的效果依赖作者本机的注册表（北辰 Anthropic/Grok/DeepSeek、本地 Ollama），别人装上后要么模型一律 5 分兜底，要么 `grok-imagine-*` 这类图像模型混进候选，`counter` 隔离经常落 `unknown`。
+
+**改了什么**
+- 能力族 6 → 26 条：claude haiku/通用、gpt-5.6/5/4、codex、gemini-3/通用、glm-5/4、kimi-k3/通用、minimax、qwen3/通用、step、hy4/hy3、deepseek-v4-pro/兜底、grok；未识别仍 5 分，但带 `derived` 标记
+- 非聊天模型自动剔除（`NON_CHAT_PATTERN`：image/imagine/video/embed/tts/audio/…），`models["p/m"].chat` 可改判
+- 覆盖文件四类键：`models`（单条分数/窗口/chat）、`families`（新族，排在内置表前）、`exclude`（踢出）、`providers`（免费线）；按 mtime 缓存，改完不用重启
+- `npm run doctor [-- --home=… --main=provider/model]`：注册表快照 × 当前能力表 → 每条 route 的族/档/分值、两档实挑与隔离原因、剔除项、未识别项
+- `mainRouteFromExec` 兼容多种宿主形状，主模型读不到时不再一律 `unknown`/`low`
+- README 新增「换台机器 / 别人用（同效复现）」：三步、覆盖示例、同效四条前提
+
+**验收**：`node --test test/*.test.mjs` 174/174；本机 doctor 实测 13 条快照 → 剔除 2 条图像模型、11 条参与打分，性能档 executor/research=opus、counter=deepseek-v4-pro（high）。
+
+**边界**：插件不读凭据、不联网、不自带模型；「同效」仍取决于对方注册表里至少有异族 provider（否则隔离只能 `mid/low`）。
+
+## v3.7.3 — 对抗隔离：基线从主模型改成执行模型，未知不再输出 unknown
+
+**现象**：`clarify_tier` 里 `counter` 时而报 `unknown`、时而报 `high`，但实际审者与执行者是同一个模型（性能档下 executor 与 counter 都挑到 `claude-opus-5-5`）。代理开时 executor 已被强化，隔离比较的却还是会话主模型，于是「opus 审 opus」被判成异族隔离。
+
+**改了什么**
+- `planRoutes()` 先定 executor，再拿它的 provider/model 当 counter 的隔离基线（`lib/agents.js` 新增 `planModules()`；效率回退档同口径）
+- 基线未知时 fail-closed：`isolation` 由 `unknown` 改为 `low`，并附 `isolationReason`（`baseline-unknown` / `same-model` / `same-family` / `diff-provider` / `diff-model-same-provider`）
+- 删掉 `AGENT_PLAN.counterAttacks`：与 `COUNTER_ATTACKS` 重复且不一致，条数只由思考/循环档决定
+- guard 文案改为「审者与执行模型同族不算真隔离；证明不了异族就标『隔离度：低』」
+
+**验收**：`node --test test/*.test.mjs` 169/169；新增用例覆盖「主模型 deepseek、executor opus 时 counter 必须换 provider 并判 high」。
+
+**边界**：只改判定与文案，未改 `agent_delegate` 与 `clarify_tier` 的派活行为——代理关着时对抗仍会退化成主模型自审，不在本版范围。
+
 ## v3.7.2 — 修全量测试并发 flaky：host.test.mjs 不再写死端口
 
 **现象**：`npm test` 单跑全绿，但两个进程同时跑（两个会话各跑一次、或本地 CI 与开发并行）时，`test/host.test.mjs` 会整块 39 项变红。
